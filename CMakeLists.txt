@@ -125,11 +125,13 @@ add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 set(PUBLIC_HEADERS
     include/Sdlx/Sdlx.h
     include/Sdlx/Sprite.h
+    include/Sdlx/Surface.h
 )
 
 set(SOURCES
     src/Sdlx.cpp
     src/Sprite.cpp
+    src/Surface.cpp
 )
 
 # The public headers are a file set so that install(TARGETS ... FILE_SET HEADERS) installs them
@@ -207,9 +209,19 @@ endif()
 #########################################################################
 
 if(${PROJECT_NAME}_DOXYGEN_OUTPUT_DIRECTORY)
-    find_package(Doxygen)
+    find_package(Doxygen OPTIONAL_COMPONENTS dot)
     if(DOXYGEN_FOUND)
         set(DOXYGEN_OUTPUT_DIRECTORY ${${PROJECT_NAME}_DOXYGEN_OUTPUT_DIRECTORY})
+        # Pass dot's location to Doxygen so the graphs don't depend on PATH. Without Graphviz,
+        # Doxygen skips the graphs instead of failing on each one.
+        if(Doxygen_dot_FOUND)
+            set(DOXYGEN_HAVE_DOT YES)
+            get_filename_component(DOXYGEN_DOT_DIR "${DOXYGEN_DOT_EXECUTABLE}" DIRECTORY)
+        else()
+            set(DOXYGEN_HAVE_DOT NO)
+            set(DOXYGEN_DOT_DIR "")
+            message(WARNING "Graphviz (dot) not found. Documentation will be generated without graphs.")
+        endif()
         configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in
                       ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
                       @ONLY)

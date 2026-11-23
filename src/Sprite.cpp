@@ -26,7 +26,7 @@ Sprite::Sprite(SDL_Surface *sheet, SDL_Rect const &rect /* = SDL_Rect{0, 0, 0, 0
 //!
 //! @param	dst		destination surface
 
-void Sprite::Draw(SDL_Surface *dst) const
+void Sprite::draw(SDL_Surface *dst) const
 {
     bool ok;
 
@@ -53,7 +53,7 @@ AnimatedSprite::AnimatedSprite()
 //! @note	The sprite does not assume ownership of the animation group, so
 //! it can be shared by many sprites.
 //! @note	The sprite starts on the first frame of the first animation, as
-//! if PlayAnimation( 0 ) had been called.
+//! if playAnimation( 0 ) had been called.
 
 AnimatedSprite::AnimatedSprite(SDL_Surface *sheet, AnimationGroup const *animations, float x /* = 0*/, float y /* = 0*/)
     : Sprite(sheet, SDL_Rect{0, 0, 0, 0}, 0, 0, x, y), pAnimations_(animations), currentAnimation_(0), currentFrame_(0),
@@ -61,7 +61,7 @@ AnimatedSprite::AnimatedSprite(SDL_Surface *sheet, AnimationGroup const *animati
 {
     assert(animations != 0);
 
-    UpdateImage();
+    updateImage();
 }
 
 //! This function starts a sprite's animation. The initial frame depends on the
@@ -73,7 +73,7 @@ AnimatedSprite::AnimatedSprite(SDL_Surface *sheet, AnimationGroup const *animati
 //! @note	This function does nothing if the sprite has no animation group
 //! (it was default-constructed) or the group has no such animation.
 
-void AnimatedSprite::PlayAnimation(int index, Direction direction /* = DIR_FORWARD*/)
+void AnimatedSprite::playAnimation(int index, Direction direction /* = DIR_FORWARD*/)
 {
     assert(pAnimations_ != 0);
     if (pAnimations_ == 0)
@@ -95,7 +95,7 @@ void AnimatedSprite::PlayAnimation(int index, Direction direction /* = DIR_FORWA
     time_ = 0.0f;
     frameTime_ = 0.0f;
 
-    UpdateImage();
+    updateImage();
 }
 
 //! This function sets the animation time to an absolute value and updates the
@@ -107,11 +107,11 @@ void AnimatedSprite::PlayAnimation(int index, Direction direction /* = DIR_FORWA
 //! @note   This function does nothing if the sprite has no animation group  (it was default-constructed) or the group
 //!         has no animations.
 
-void AnimatedSprite::SetTime(float time)
+void AnimatedSprite::setTime(float time)
 {
     assert(pAnimations_ != 0);
 
-    Animation const *pAnimation = CurrentAnimation();
+    Animation const *pAnimation = currentAnimation();
     if (pAnimation == 0)
     {
         return;
@@ -122,8 +122,8 @@ void AnimatedSprite::SetTime(float time)
         direction_ = DIR_FORWARD;
     }
 
-    PlayAnimation(currentAnimation_, direction_);
-    AdvanceTime(time);
+    playAnimation(currentAnimation_, direction_);
+    advanceTime(time);
 }
 
 //! This function advances the animation by the specified amount of time
@@ -135,11 +135,11 @@ void AnimatedSprite::SetTime(float time)
 //! @note	This function does nothing if the sprite has no animation group
 //! (it was default-constructed) or the group has no animations.
 
-void AnimatedSprite::AdvanceTime(float elapsed)
+void AnimatedSprite::advanceTime(float elapsed)
 {
     assert(pAnimations_ != 0);
 
-    Animation const *pAnimation = CurrentAnimation();
+    Animation const *pAnimation = currentAnimation();
     if (pAnimation == 0)
     {
         return;
@@ -265,7 +265,7 @@ void AnimatedSprite::AdvanceTime(float elapsed)
 
     frameTime_ = e;
 
-    UpdateImage();
+    updateImage();
 
     // Save the time
 
@@ -284,11 +284,11 @@ void AnimatedSprite::AdvanceTime(float elapsed)
 //! (it was default-constructed), the group has no animations, or the
 //! animation has no such frame.
 
-void AnimatedSprite::SetFrame(int index)
+void AnimatedSprite::setFrame(int index)
 {
     assert(pAnimations_ != 0);
 
-    Animation const *pAnimation = CurrentAnimation();
+    Animation const *pAnimation = currentAnimation();
     if (pAnimation == 0)
     {
         return;
@@ -330,7 +330,7 @@ void AnimatedSprite::SetFrame(int index)
     currentFrame_ = index;
     frameTime_ = 0.0f;
 
-    UpdateImage();
+    updateImage();
 }
 
 //! This function will update the animation based on the amount of time that has
@@ -339,11 +339,11 @@ void AnimatedSprite::SetFrame(int index)
 //! @param	elapsedTime		Time elapsed since this function was
 //! last called (must be >= 0)
 
-void AnimatedSprite::Service(float elapsedTime)
+void AnimatedSprite::service(float elapsedTime)
 {
     assert(elapsedTime >= 0.0f);
 
-    AdvanceTime(elapsedTime);
+    advanceTime(elapsedTime);
 }
 
 //! Unlike a Sprite, an animated sprite with an empty image rectangle draws
@@ -352,17 +352,17 @@ void AnimatedSprite::Service(float elapsedTime)
 //!
 //! @param	dst		destination surface
 
-void AnimatedSprite::Draw(SDL_Surface *dst) const
+void AnimatedSprite::draw(SDL_Surface *dst) const
 {
     if (rect_.w <= 0 || rect_.h <= 0)
     {
         return;
     }
 
-    Sprite::Draw(dst);
+    Sprite::draw(dst);
 }
 
-AnimatedSprite::Animation const *AnimatedSprite::CurrentAnimation() const
+AnimatedSprite::Animation const *AnimatedSprite::currentAnimation() const
 {
     if (pAnimations_ == 0 || currentAnimation_ < 0 || currentAnimation_ >= int(pAnimations_->animations.size()))
     {
@@ -372,7 +372,7 @@ AnimatedSprite::Animation const *AnimatedSprite::CurrentAnimation() const
     return &pAnimations_->animations[currentAnimation_];
 }
 
-void AnimatedSprite::UpdateImage()
+void AnimatedSprite::updateImage()
 {
     // If there is no current frame, then there is no image
 
@@ -380,7 +380,7 @@ void AnimatedSprite::UpdateImage()
     offsetX_ = 0;
     offsetY_ = 0;
 
-    Animation const *pAnimation = CurrentAnimation();
+    Animation const *pAnimation = currentAnimation();
     if (pAnimation == 0 || currentFrame_ < 0 || currentFrame_ >= int(pAnimation->frames.size()))
     {
         return;
@@ -419,7 +419,7 @@ AnimatedSprite::AnimationGroup::AnimationGroup(ImageList const &images, Animatio
 //!
 //! @return	The new sprite.
 
-Sprite *SpriteFactory::LoadSprite(char const * /*filename*/)
+Sprite *SpriteFactory::loadSprite(char const * /*filename*/)
 {
     return 0;
 }
@@ -433,7 +433,7 @@ Sprite *SpriteFactory::LoadSprite(char const * /*filename*/)
 //!
 //! @return	The new animated sprite.
 
-AnimatedSprite *SpriteFactory::LoadAnimatedSprite(char const * /*filename*/)
+AnimatedSprite *SpriteFactory::loadAnimatedSprite(char const * /*filename*/)
 {
     return 0;
 }

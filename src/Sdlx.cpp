@@ -5,7 +5,7 @@
 namespace
 {
 
-bool DefaultEventLoopEventHandler(SDL_Event const &event)
+bool defaultEventLoopEventHandler(SDL_Event const &event)
 {
     return (event.type != SDL_EVENT_QUIT);
 }
@@ -31,7 +31,7 @@ namespace Sdlx
 //!
 //! @return		pointer to the loaded surface (free with SDL_DestroySurface), or 0 if error
 
-SDL_Surface *LoadSurface(char const *filename)
+SDL_Surface *loadSurface(char const *filename)
 {
     return IMG_Load(filename);
 }
@@ -56,9 +56,9 @@ SDL_Surface *LoadSurface(char const *filename)
 //!
 //! @return		pointer to the loaded surface (free with SDL_DestroySurface), or 0 if error
 
-SDL_Surface *LoadColorKeyedSurface(char const *filename, SDL_Color key)
+SDL_Surface *loadColorKeyedSurface(char const *filename, SDL_Color key)
 {
-    SDL_Surface *image = LoadSurface(filename);
+    SDL_Surface *image = loadSurface(filename);
 
     if (image == 0)
     {
@@ -104,13 +104,13 @@ SDL_Surface *LoadColorKeyedSurface(char const *filename, SDL_Color key)
 //! @return		@c true if the event handler ended the loop, or @c false if the loop ended because the SDL events
 //!             subsystem is not initialized, so that no event can arrive.
 
-bool EventLoop(EventLoopEventHandler pEH /* = 0*/, EventLoopIdleCallback pIdle /* = 0*/)
+bool eventLoop(EventLoopEventHandler pEH /* = 0*/, EventLoopIdleCallback pIdle /* = 0*/)
 {
     bool skipIdle = false;
 
     if (pEH == 0)
     {
-        pEH = DefaultEventLoopEventHandler;
+        pEH = defaultEventLoopEventHandler;
     }
 
     for (;;)
@@ -172,7 +172,7 @@ bool EventLoop(EventLoopEventHandler pEH /* = 0*/, EventLoopIdleCallback pIdle /
 //!
 //! @deprecated	Use brace initialization instead: <tt>SDL_Color{ r, g, b, 255 }</tt>.
 
-SDL_Color MakeColor(int red, int green, int blue)
+SDL_Color makeColor(int red, int green, int blue)
 {
     SDL_Color color = {Uint8(red), Uint8(green), Uint8(blue), 255};
 
@@ -190,7 +190,7 @@ SDL_Color MakeColor(int red, int green, int blue)
 //!
 //! @deprecated	Use brace initialization instead: <tt>SDL_Rect{ x, y, w, h }</tt>.
 
-SDL_Rect MakeRect(int x, int y, int w, int h)
+SDL_Rect makeRect(int x, int y, int w, int h)
 {
     SDL_Rect rect = {x, y, w, h};
 

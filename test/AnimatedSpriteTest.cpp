@@ -78,9 +78,9 @@ TEST_F(AnimatedSpriteTest, ConstructorSetsPosition)
 
     EXPECT_EQ(sprite.x_, 3.0f);
     EXPECT_EQ(sprite.y_, 4.0f);
-    EXPECT_EQ(sprite.GetAnimation(), 0);
-    EXPECT_EQ(sprite.GetFrame(), 0);
-    EXPECT_EQ(sprite.GetTime(), 0.0f);
+    EXPECT_EQ(sprite.getAnimation(), 0);
+    EXPECT_EQ(sprite.getFrame(), 0);
+    EXPECT_EQ(sprite.getTime(), 0.0f);
 }
 
 TEST_F(AnimatedSpriteTest, ConstructorSelectsFirstFrameOfFirstAnimation)
@@ -102,14 +102,14 @@ TEST(AnimatedSpriteEmptyGroupTest, SpriteHasNoImageAndAnimationFunctionsDoNothin
     AnimationGroup empty;
     AnimatedSprite sprite(nullptr, &empty);
 
-    sprite.AdvanceTime(1.0f);
-    sprite.Service(1.0f);
-    sprite.SetTime(2.0f);
-    sprite.SetFrame(1);
+    sprite.advanceTime(1.0f);
+    sprite.service(1.0f);
+    sprite.setTime(2.0f);
+    sprite.setFrame(1);
 
-    EXPECT_EQ(sprite.GetAnimation(), 0);
-    EXPECT_EQ(sprite.GetFrame(), 0);
-    EXPECT_EQ(sprite.GetTime(), 0.0f);
+    EXPECT_EQ(sprite.getAnimation(), 0);
+    EXPECT_EQ(sprite.getFrame(), 0);
+    EXPECT_EQ(sprite.getTime(), 0.0f);
     EXPECT_EQ(sprite.rect_.w, 0);
     EXPECT_EQ(sprite.rect_.h, 0);
 }
@@ -124,18 +124,18 @@ TEST_F(AnimatedSpriteTest, AnimationWithNoFramesHasNoImage)
         int const index = int(group.animations.size()) - 1;
 
         AnimatedSprite sprite(nullptr, &group);
-        sprite.PlayAnimation(index, AnimatedSprite::DIR_BACKWARD);
-        EXPECT_EQ(sprite.GetAnimation(), index);
-        EXPECT_EQ(sprite.GetFrame(), 0);
+        sprite.playAnimation(index, AnimatedSprite::DIR_BACKWARD);
+        EXPECT_EQ(sprite.getAnimation(), index);
+        EXPECT_EQ(sprite.getFrame(), 0);
         EXPECT_EQ(sprite.rect_.w, 0);
 
-        sprite.AdvanceTime(1.5f); // must not read a frame
-        EXPECT_EQ(sprite.GetFrame(), 0);
-        EXPECT_FLOAT_EQ(sprite.GetTime(), 1.5f);
+        sprite.advanceTime(1.5f); // must not read a frame
+        EXPECT_EQ(sprite.getFrame(), 0);
+        EXPECT_FLOAT_EQ(sprite.getTime(), 1.5f);
 
-        sprite.SetTime(2.5f);
-        EXPECT_EQ(sprite.GetFrame(), 0);
-        EXPECT_FLOAT_EQ(sprite.GetTime(), 2.5f);
+        sprite.setTime(2.5f);
+        EXPECT_EQ(sprite.getFrame(), 0);
+        EXPECT_FLOAT_EQ(sprite.getTime(), 2.5f);
         EXPECT_EQ(sprite.rect_.w, 0);
     }
 }
@@ -143,21 +143,21 @@ TEST_F(AnimatedSpriteTest, AnimationWithNoFramesHasNoImage)
 TEST_F(AnimatedSpriteTest, AdvanceTimeCopesWithAFrameListThatBecameShorter)
 {
     AnimatedSprite sprite(nullptr, &group);
-    sprite.PlayAnimation(LOOP);
-    sprite.AdvanceTime(2.5f);
-    ASSERT_EQ(sprite.GetFrame(), 2);
+    sprite.playAnimation(LOOP);
+    sprite.advanceTime(2.5f);
+    ASSERT_EQ(sprite.getFrame(), 2);
 
     // The group is shared, so its owner can change it under the sprite
     group.animations[LOOP].frames = {{0, 1.0f}, {1, 1.0f}};
 
     // Frame 2 no longer exists. The sprite continues from the start of the last
     // frame instead of reading past the end of the list.
-    sprite.AdvanceTime(0.5f);
-    EXPECT_EQ(sprite.GetFrame(), 1);
+    sprite.advanceTime(0.5f);
+    EXPECT_EQ(sprite.getFrame(), 1);
     EXPECT_EQ(sprite.rect_.x, 10);
 
-    sprite.AdvanceTime(0.5f);
-    EXPECT_EQ(sprite.GetFrame(), 0);
+    sprite.advanceTime(0.5f);
+    EXPECT_EQ(sprite.getFrame(), 0);
 }
 
 TEST(AnimationGroupTest, MembersHaveDefaultValues)
@@ -182,11 +182,11 @@ TEST(AnimationGroupTest, MembersHaveDefaultValues)
 TEST_F(AnimatedSpriteTest, PlayAnimationForwardStartsAtFirstFrame)
 {
     AnimatedSprite sprite(nullptr, &group);
-    sprite.PlayAnimation(LOOP);
+    sprite.playAnimation(LOOP);
 
-    EXPECT_EQ(sprite.GetAnimation(), LOOP);
-    EXPECT_EQ(sprite.GetFrame(), 0);
-    EXPECT_EQ(sprite.GetTime(), 0.0f);
+    EXPECT_EQ(sprite.getAnimation(), LOOP);
+    EXPECT_EQ(sprite.getFrame(), 0);
+    EXPECT_EQ(sprite.getTime(), 0.0f);
     EXPECT_EQ(sprite.rect_.x, 0);
     EXPECT_EQ(sprite.offsetX_, 0);
     EXPECT_EQ(sprite.offsetY_, 0);
@@ -195,9 +195,9 @@ TEST_F(AnimatedSpriteTest, PlayAnimationForwardStartsAtFirstFrame)
 TEST_F(AnimatedSpriteTest, PlayAnimationBackwardStartsAtLastFrame)
 {
     AnimatedSprite sprite(nullptr, &group);
-    sprite.PlayAnimation(LOOP, AnimatedSprite::DIR_BACKWARD);
+    sprite.playAnimation(LOOP, AnimatedSprite::DIR_BACKWARD);
 
-    EXPECT_EQ(sprite.GetFrame(), 2);
+    EXPECT_EQ(sprite.getFrame(), 2);
     EXPECT_EQ(sprite.rect_.x, 20);
     EXPECT_EQ(sprite.offsetX_, 2);
     EXPECT_EQ(sprite.offsetY_, 4);
@@ -206,169 +206,169 @@ TEST_F(AnimatedSpriteTest, PlayAnimationBackwardStartsAtLastFrame)
 TEST_F(AnimatedSpriteTest, AdvanceWithinFrameDoesNotChangeFrame)
 {
     AnimatedSprite sprite(nullptr, &group);
-    sprite.PlayAnimation(LOOP);
-    sprite.AdvanceTime(0.5f);
+    sprite.playAnimation(LOOP);
+    sprite.advanceTime(0.5f);
 
-    EXPECT_EQ(sprite.GetFrame(), 0);
-    EXPECT_FLOAT_EQ(sprite.GetTime(), 0.5f);
+    EXPECT_EQ(sprite.getFrame(), 0);
+    EXPECT_FLOAT_EQ(sprite.getTime(), 0.5f);
 }
 
 TEST_F(AnimatedSpriteTest, AdvanceZeroDoesNothing)
 {
     AnimatedSprite sprite(nullptr, &group);
-    sprite.PlayAnimation(LOOP);
-    sprite.AdvanceTime(0.0f);
+    sprite.playAnimation(LOOP);
+    sprite.advanceTime(0.0f);
 
-    EXPECT_EQ(sprite.GetFrame(), 0);
-    EXPECT_EQ(sprite.GetTime(), 0.0f);
+    EXPECT_EQ(sprite.getFrame(), 0);
+    EXPECT_EQ(sprite.getTime(), 0.0f);
 }
 
 TEST_F(AnimatedSpriteTest, AdvanceCrossesFramesAndUpdatesImage)
 {
     AnimatedSprite sprite(nullptr, &group);
-    sprite.PlayAnimation(LOOP);
-    sprite.AdvanceTime(1.5f);
+    sprite.playAnimation(LOOP);
+    sprite.advanceTime(1.5f);
 
-    EXPECT_EQ(sprite.GetFrame(), 1);
+    EXPECT_EQ(sprite.getFrame(), 1);
     EXPECT_EQ(sprite.rect_.x, 10);
     EXPECT_EQ(sprite.offsetX_, 1);
     EXPECT_EQ(sprite.offsetY_, 2);
-    EXPECT_FLOAT_EQ(sprite.GetTime(), 1.5f);
+    EXPECT_FLOAT_EQ(sprite.getTime(), 1.5f);
 }
 
 TEST_F(AnimatedSpriteTest, AdvanceExactlyToFrameBoundary)
 {
     AnimatedSprite sprite(nullptr, &group);
-    sprite.PlayAnimation(LOOP);
-    sprite.AdvanceTime(1.0f);
-    EXPECT_EQ(sprite.GetFrame(), 1);
+    sprite.playAnimation(LOOP);
+    sprite.advanceTime(1.0f);
+    EXPECT_EQ(sprite.getFrame(), 1);
 
     // The time spent in the new frame must be zero, so half a second more stays
     // in the same frame.
-    sprite.AdvanceTime(0.5f);
-    EXPECT_EQ(sprite.GetFrame(), 1);
-    sprite.AdvanceTime(0.5f);
-    EXPECT_EQ(sprite.GetFrame(), 2);
+    sprite.advanceTime(0.5f);
+    EXPECT_EQ(sprite.getFrame(), 1);
+    sprite.advanceTime(0.5f);
+    EXPECT_EQ(sprite.getFrame(), 2);
 }
 
 TEST_F(AnimatedSpriteTest, PartialAdvancesAccumulate)
 {
     AnimatedSprite sprite(nullptr, &group);
-    sprite.PlayAnimation(LOOP);
+    sprite.playAnimation(LOOP);
 
-    sprite.AdvanceTime(0.75f);
-    EXPECT_EQ(sprite.GetFrame(), 0);
-    sprite.AdvanceTime(0.75f);
-    EXPECT_EQ(sprite.GetFrame(), 1);
-    EXPECT_FLOAT_EQ(sprite.GetTime(), 1.5f);
+    sprite.advanceTime(0.75f);
+    EXPECT_EQ(sprite.getFrame(), 0);
+    sprite.advanceTime(0.75f);
+    EXPECT_EQ(sprite.getFrame(), 1);
+    EXPECT_FLOAT_EQ(sprite.getTime(), 1.5f);
 }
 
 TEST_F(AnimatedSpriteTest, LoopWrapsToFirstFrame)
 {
     AnimatedSprite sprite(nullptr, &group);
-    sprite.PlayAnimation(LOOP);
-    sprite.AdvanceTime(3.5f);
+    sprite.playAnimation(LOOP);
+    sprite.advanceTime(3.5f);
 
-    EXPECT_EQ(sprite.GetFrame(), 0);
-    sprite.AdvanceTime(1.0f);
-    EXPECT_EQ(sprite.GetFrame(), 1);
+    EXPECT_EQ(sprite.getFrame(), 0);
+    sprite.advanceTime(1.0f);
+    EXPECT_EQ(sprite.getFrame(), 1);
 }
 
 TEST_F(AnimatedSpriteTest, BackwardLoopWrapsToLastFrame)
 {
     AnimatedSprite sprite(nullptr, &group);
-    sprite.PlayAnimation(LOOP, AnimatedSprite::DIR_BACKWARD);
+    sprite.playAnimation(LOOP, AnimatedSprite::DIR_BACKWARD);
 
-    sprite.AdvanceTime(1.0f);
-    EXPECT_EQ(sprite.GetFrame(), 1);
-    sprite.AdvanceTime(1.0f);
-    EXPECT_EQ(sprite.GetFrame(), 0);
-    sprite.AdvanceTime(1.0f);
-    EXPECT_EQ(sprite.GetFrame(), 2);
+    sprite.advanceTime(1.0f);
+    EXPECT_EQ(sprite.getFrame(), 1);
+    sprite.advanceTime(1.0f);
+    EXPECT_EQ(sprite.getFrame(), 0);
+    sprite.advanceTime(1.0f);
+    EXPECT_EQ(sprite.getFrame(), 2);
 }
 
 TEST_F(AnimatedSpriteTest, OnceFreezesOnLastFrame)
 {
     AnimatedSprite sprite(nullptr, &group);
-    sprite.PlayAnimation(ONCE);
+    sprite.playAnimation(ONCE);
 
-    sprite.AdvanceTime(2.5f);
-    EXPECT_EQ(sprite.GetFrame(), 2);
+    sprite.advanceTime(2.5f);
+    EXPECT_EQ(sprite.getFrame(), 2);
 
-    sprite.AdvanceTime(100.0f);
-    EXPECT_EQ(sprite.GetFrame(), 2);
+    sprite.advanceTime(100.0f);
+    EXPECT_EQ(sprite.getFrame(), 2);
     EXPECT_EQ(sprite.rect_.x, 20);
 }
 
 TEST_F(AnimatedSpriteTest, PingPongReversesAtTheEnds)
 {
     AnimatedSprite sprite(nullptr, &group);
-    sprite.PlayAnimation(PINGPONG);
+    sprite.playAnimation(PINGPONG);
 
-    sprite.AdvanceTime(2.0f);
-    EXPECT_EQ(sprite.GetFrame(), 2);
+    sprite.advanceTime(2.0f);
+    EXPECT_EQ(sprite.getFrame(), 2);
 
     // The last frame plays once more as the direction reverses, then the
     // animation steps backward.
-    sprite.AdvanceTime(1.0f);
-    EXPECT_EQ(sprite.GetFrame(), 2);
-    sprite.AdvanceTime(1.0f);
-    EXPECT_EQ(sprite.GetFrame(), 1);
-    sprite.AdvanceTime(1.0f);
-    EXPECT_EQ(sprite.GetFrame(), 0);
+    sprite.advanceTime(1.0f);
+    EXPECT_EQ(sprite.getFrame(), 2);
+    sprite.advanceTime(1.0f);
+    EXPECT_EQ(sprite.getFrame(), 1);
+    sprite.advanceTime(1.0f);
+    EXPECT_EQ(sprite.getFrame(), 0);
 
     // ...and reverses again at the start.
-    sprite.AdvanceTime(1.0f);
-    EXPECT_EQ(sprite.GetFrame(), 0);
-    sprite.AdvanceTime(1.0f);
-    EXPECT_EQ(sprite.GetFrame(), 1);
+    sprite.advanceTime(1.0f);
+    EXPECT_EQ(sprite.getFrame(), 0);
+    sprite.advanceTime(1.0f);
+    EXPECT_EQ(sprite.getFrame(), 1);
 }
 
 TEST_F(AnimatedSpriteTest, SetTimeJumpsToAbsoluteTime)
 {
     AnimatedSprite sprite(nullptr, &group);
-    sprite.PlayAnimation(LOOP);
-    sprite.AdvanceTime(2.5f);
+    sprite.playAnimation(LOOP);
+    sprite.advanceTime(2.5f);
 
-    sprite.SetTime(1.25f);
-    EXPECT_EQ(sprite.GetFrame(), 1);
-    EXPECT_FLOAT_EQ(sprite.GetTime(), 1.25f);
+    sprite.setTime(1.25f);
+    EXPECT_EQ(sprite.getFrame(), 1);
+    EXPECT_FLOAT_EQ(sprite.getTime(), 1.25f);
 }
 
 TEST_F(AnimatedSpriteTest, SetFrameSetsFrameAndTime)
 {
     AnimatedSprite sprite(nullptr, &group);
-    sprite.PlayAnimation(LOOP);
+    sprite.playAnimation(LOOP);
 
-    sprite.SetFrame(2);
-    EXPECT_EQ(sprite.GetFrame(), 2);
-    EXPECT_FLOAT_EQ(sprite.GetTime(), 2.0f);
+    sprite.setFrame(2);
+    EXPECT_EQ(sprite.getFrame(), 2);
+    EXPECT_FLOAT_EQ(sprite.getTime(), 2.0f);
     EXPECT_EQ(sprite.rect_.x, 20);
     EXPECT_EQ(sprite.offsetY_, 4);
 
     // Playback continues from the start of the selected frame.
-    sprite.AdvanceTime(1.0f);
-    EXPECT_EQ(sprite.GetFrame(), 0);
+    sprite.advanceTime(1.0f);
+    EXPECT_EQ(sprite.getFrame(), 0);
 }
 
 TEST_F(AnimatedSpriteTest, SetFrameBackwardCountsFramesAfterIt)
 {
     AnimatedSprite sprite(nullptr, &group);
-    sprite.PlayAnimation(LOOP, AnimatedSprite::DIR_BACKWARD);
+    sprite.playAnimation(LOOP, AnimatedSprite::DIR_BACKWARD);
 
-    sprite.SetFrame(0); // must terminate
-    EXPECT_EQ(sprite.GetFrame(), 0);
-    EXPECT_FLOAT_EQ(sprite.GetTime(), 2.0f);
+    sprite.setFrame(0); // must terminate
+    EXPECT_EQ(sprite.getFrame(), 0);
+    EXPECT_FLOAT_EQ(sprite.getTime(), 2.0f);
 }
 
 TEST_F(AnimatedSpriteTest, ServiceAdvancesTime)
 {
     AnimatedSprite sprite(nullptr, &group);
-    sprite.PlayAnimation(LOOP);
-    sprite.Service(1.25f);
+    sprite.playAnimation(LOOP);
+    sprite.service(1.25f);
 
-    EXPECT_EQ(sprite.GetFrame(), 1);
-    EXPECT_FLOAT_EQ(sprite.GetTime(), 1.25f);
+    EXPECT_EQ(sprite.getFrame(), 1);
+    EXPECT_FLOAT_EQ(sprite.getTime(), 1.25f);
 }
 
 TEST_F(AnimatedSpriteTest, LoopWithZeroDurationFramesStaysOnCurrentFrame)
@@ -379,12 +379,12 @@ TEST_F(AnimatedSpriteTest, LoopWithZeroDurationFramesStaysOnCurrentFrame)
     group.animations.push_back(still);
 
     AnimatedSprite sprite(nullptr, &group);
-    sprite.PlayAnimation(3);
-    sprite.Service(0.016f); // must terminate
+    sprite.playAnimation(3);
+    sprite.service(0.016f); // must terminate
 
-    EXPECT_EQ(sprite.GetFrame(), 0);
+    EXPECT_EQ(sprite.getFrame(), 0);
     EXPECT_EQ(sprite.rect_.x, 10);
-    EXPECT_FLOAT_EQ(sprite.GetTime(), 0.016f);
+    EXPECT_FLOAT_EQ(sprite.getTime(), 0.016f);
 }
 
 TEST_F(AnimatedSpriteTest, PingPongWithZeroDurationFramesStaysOnCurrentFrame)
@@ -395,12 +395,12 @@ TEST_F(AnimatedSpriteTest, PingPongWithZeroDurationFramesStaysOnCurrentFrame)
     group.animations.push_back(still);
 
     AnimatedSprite sprite(nullptr, &group);
-    sprite.PlayAnimation(3);
-    sprite.AdvanceTime(5.0f); // must terminate
+    sprite.playAnimation(3);
+    sprite.advanceTime(5.0f); // must terminate
 
-    EXPECT_EQ(sprite.GetFrame(), 0);
+    EXPECT_EQ(sprite.getFrame(), 0);
     EXPECT_EQ(sprite.rect_.x, 0);
-    EXPECT_FLOAT_EQ(sprite.GetTime(), 5.0f);
+    EXPECT_FLOAT_EQ(sprite.getTime(), 5.0f);
 }
 
 // Subtracting a frame's duration from a float as large as 1e9 does not change
@@ -409,42 +409,42 @@ TEST_F(AnimatedSpriteTest, PingPongWithZeroDurationFramesStaysOnCurrentFrame)
 TEST_F(AnimatedSpriteTest, VeryLargeAdvanceOfLoopLandsOnTheRightFrame)
 {
     AnimatedSprite sprite(nullptr, &group);
-    sprite.PlayAnimation(LOOP);
+    sprite.playAnimation(LOOP);
 
     // 333,333,333 whole loops of 3 seconds, and 1 second more
-    sprite.AdvanceTime(1.0e9f);
-    EXPECT_EQ(sprite.GetFrame(), 1);
-    sprite.AdvanceTime(1.0f);
-    EXPECT_EQ(sprite.GetFrame(), 2);
+    sprite.advanceTime(1.0e9f);
+    EXPECT_EQ(sprite.getFrame(), 1);
+    sprite.advanceTime(1.0f);
+    EXPECT_EQ(sprite.getFrame(), 2);
 }
 
 TEST_F(AnimatedSpriteTest, VeryLargeAdvanceOfPingPongLandsOnTheRightFrame)
 {
     AnimatedSprite sprite(nullptr, &group);
-    sprite.PlayAnimation(PINGPONG);
+    sprite.playAnimation(PINGPONG);
 
     // 166,666,666 whole round trips of 6 seconds, and 4 seconds more. A round
     // trip is frames 0 1 2 2 1 0, so the animation is on frame 1, going backward.
-    sprite.AdvanceTime(1.0e9f);
-    EXPECT_EQ(sprite.GetFrame(), 1);
-    sprite.AdvanceTime(1.0f);
-    EXPECT_EQ(sprite.GetFrame(), 0);
+    sprite.advanceTime(1.0e9f);
+    EXPECT_EQ(sprite.getFrame(), 1);
+    sprite.advanceTime(1.0f);
+    EXPECT_EQ(sprite.getFrame(), 0);
 }
 
 TEST_F(AnimatedSpriteTest, AdvancingByWholeLoopsKeepsThePositionInTheFrame)
 {
     AnimatedSprite sprite(nullptr, &group);
-    sprite.PlayAnimation(LOOP);
-    sprite.AdvanceTime(1.5f);
+    sprite.playAnimation(LOOP);
+    sprite.advanceTime(1.5f);
 
-    sprite.AdvanceTime(3000.0f);
-    EXPECT_EQ(sprite.GetFrame(), 1);
+    sprite.advanceTime(3000.0f);
+    EXPECT_EQ(sprite.getFrame(), 1);
 
     // Still half a second into frame 1
-    sprite.AdvanceTime(0.25f);
-    EXPECT_EQ(sprite.GetFrame(), 1);
-    sprite.AdvanceTime(0.25f);
-    EXPECT_EQ(sprite.GetFrame(), 2);
+    sprite.advanceTime(0.25f);
+    EXPECT_EQ(sprite.getFrame(), 1);
+    sprite.advanceTime(0.25f);
+    EXPECT_EQ(sprite.getFrame(), 2);
 }
 
 // A default-constructed sprite has no animation group. Its animation functions
@@ -457,15 +457,15 @@ TEST(AnimatedSpriteWithoutGroupTest, AnimationFunctionsDoNothing)
 {
     AnimatedSprite sprite;
 
-    sprite.PlayAnimation(1);
-    sprite.AdvanceTime(1.0f);
-    sprite.Service(1.0f);
-    sprite.SetTime(2.0f);
-    sprite.SetFrame(1);
+    sprite.playAnimation(1);
+    sprite.advanceTime(1.0f);
+    sprite.service(1.0f);
+    sprite.setTime(2.0f);
+    sprite.setFrame(1);
 
-    EXPECT_EQ(sprite.GetAnimation(), 0);
-    EXPECT_EQ(sprite.GetFrame(), 0);
-    EXPECT_EQ(sprite.GetTime(), 0.0f);
+    EXPECT_EQ(sprite.getAnimation(), 0);
+    EXPECT_EQ(sprite.getFrame(), 0);
+    EXPECT_EQ(sprite.getTime(), 0.0f);
     EXPECT_EQ(sprite.rect_.w, 0);
     EXPECT_EQ(sprite.rect_.h, 0);
 }
@@ -476,12 +476,12 @@ TEST_F(AnimatedSpriteTest, AnimationGroupIsSharedBetweenSprites)
 {
     AnimatedSprite a(nullptr, &group);
     AnimatedSprite b(nullptr, &group);
-    a.PlayAnimation(LOOP);
-    b.PlayAnimation(LOOP);
+    a.playAnimation(LOOP);
+    b.playAnimation(LOOP);
 
-    a.AdvanceTime(1.0f);
-    EXPECT_EQ(a.GetFrame(), 1);
-    EXPECT_EQ(b.GetFrame(), 0);
+    a.advanceTime(1.0f);
+    EXPECT_EQ(a.getFrame(), 1);
+    EXPECT_EQ(b.getFrame(), 0);
 }
 
 TEST(AnimationGroupTest, ConstructorCopiesLists)

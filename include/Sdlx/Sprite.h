@@ -31,7 +31,7 @@ class Sprite
     virtual ~Sprite() = default;
 
     //! Draws the sprite
-    virtual void Draw(SDL_Surface *dst) const;
+    virtual void draw(SDL_Surface *dst) const;
 
     float x_;       //!< Location of the sprite's origin on the display
     float y_;       //!< Location of the sprite's origin on the display
@@ -140,47 +140,47 @@ class AnimatedSprite : public Sprite
     virtual ~AnimatedSprite() = default;
 
     //! Starts an animation
-    void PlayAnimation(int index, Direction direction = DIR_FORWARD);
+    void playAnimation(int index, Direction direction = DIR_FORWARD);
 
     //! Advances the time (in seconds)
-    void AdvanceTime(float elapsed);
+    void advanceTime(float elapsed);
 
     //! Sets the time (in seconds)
-    void SetTime(float time);
+    void setTime(float time);
 
     //! Sets the current animation frame
-    void SetFrame(int index);
+    void setFrame(int index);
 
     //! Returns the current animation index
-    int GetAnimation() const
+    int getAnimation() const
     {
         return currentAnimation_;
     }
 
     //! Returns the current time (in seconds)
-    float GetTime() const
+    float getTime() const
     {
         return time_;
     }
 
     //! Returns the current animation frame
-    int GetFrame() const
+    int getFrame() const
     {
         return currentFrame_;
     }
 
     //! Updates the state of the sprite animation
-    void Service(float elapsedTime);
+    void service(float elapsedTime);
 
     //! Draws the current image of the animation
-    void Draw(SDL_Surface *dst) const override;
+    void draw(SDL_Surface *dst) const override;
 
   private:
     // Returns the current animation, or 0 if there is none
-    Animation const *CurrentAnimation() const;
+    Animation const *currentAnimation() const;
 
     // Sets the image location, size and offset according to the current frame
-    void UpdateImage();
+    void updateImage();
 
     AnimationGroup const *pAnimations_; // The animation group
     int currentAnimation_;              // The index of the current animation
@@ -197,8 +197,8 @@ class AnimatedSprite : public Sprite
 class SpriteFactory
 {
   public:
-    Sprite *LoadSprite(char const *filename);
-    AnimatedSprite *LoadAnimatedSprite(char const *filename);
+    Sprite *loadSprite(char const *filename);
+    AnimatedSprite *loadAnimatedSprite(char const *filename);
 };
 
 } // namespace Sdlx

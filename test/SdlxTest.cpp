@@ -1,4 +1,4 @@
-// Tests for the helpers in Sdlx.h and for Sprite::Draw. These run headless:
+// Tests for the helpers in Sdlx.h and for Sprite::draw. These run headless:
 // they use in-memory surfaces and the SDL event queue, and never create a
 // window.
 
@@ -33,13 +33,13 @@ std::ostream &operator<<(std::ostream &os, Pixel const &p)
     return os << "(" << int(p.r) << "," << int(p.g) << "," << int(p.b) << ")";
 }
 
-Pixel const BLACK = {0, 0, 0};
-Pixel const RED = {255, 0, 0};
-Pixel const GREEN = {0, 255, 0};
-Pixel const BLUE = {0, 0, 255};
-Pixel const MAGENTA = {255, 0, 255};
+constexpr Pixel BLACK = {0, 0, 0};
+constexpr Pixel RED = {255, 0, 0};
+constexpr Pixel GREEN = {0, 255, 0};
+constexpr Pixel BLUE = {0, 0, 255};
+constexpr Pixel MAGENTA = {255, 0, 255};
 
-SDL_Surface *NewSurface(int w, int h, Pixel fill)
+SDL_Surface *newSurface(int w, int h, Pixel fill)
 {
     SDL_Surface *s = SDL_CreateSurface(w, h, SDL_PIXELFORMAT_RGBA32);
     if (s != nullptr)
@@ -49,12 +49,12 @@ SDL_Surface *NewSurface(int w, int h, Pixel fill)
     return s;
 }
 
-void Fill(SDL_Surface *s, SDL_Rect rect, Pixel p)
+void fill(SDL_Surface *s, SDL_Rect rect, Pixel p)
 {
     SDL_FillSurfaceRect(s, &rect, SDL_MapSurfaceRGB(s, p.r, p.g, p.b));
 }
 
-Pixel At(SDL_Surface *s, int x, int y)
+Pixel at(SDL_Surface *s, int x, int y)
 {
     Pixel p = {0, 0, 0};
     Uint8 a;
@@ -103,7 +103,7 @@ unsigned char const BLUE_3X3_PNG[] = {
     0x08, 0xf8, 0xa6, 0x20, 0x7f, 0x64, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
 };
 
-bool WriteFile(std::string const &path, unsigned char const *data, size_t size)
+bool writeFile(std::string const &path, unsigned char const *data, size_t size)
 {
     std::ofstream file(path, std::ios::binary);
     file.write(reinterpret_cast<char const *>(data), std::streamsize(size));
@@ -112,7 +112,7 @@ bool WriteFile(std::string const &path, unsigned char const *data, size_t size)
 
 // Saves an 8-bit paletted BMP that is one pixel high and has one pixel for each
 // palette entry: pixel i has the color palette[i].
-bool SavePalettedBmp(std::string const &path, std::vector<SDL_Color> const &palette)
+bool savePalettedBmp(std::string const &path, std::vector<SDL_Color> const &palette)
 {
     SurfacePtr surface(SDL_CreateSurface(int(palette.size()), 1, SDL_PIXELFORMAT_INDEX8));
     if (surface.get() == nullptr)
@@ -151,7 +151,7 @@ bool SavePalettedBmp(std::string const &path, std::vector<SDL_Color> const &pale
 
 TEST(HelpersTest, MakeRectSetsFields)
 {
-    SDL_Rect r = Sdlx::MakeRect(1, 2, 3, 4);
+    SDL_Rect r = Sdlx::makeRect(1, 2, 3, 4);
 
     EXPECT_EQ(r.x, 1);
     EXPECT_EQ(r.y, 2);
@@ -161,7 +161,7 @@ TEST(HelpersTest, MakeRectSetsFields)
 
 TEST(HelpersTest, MakeColorSetsFieldsAndIsOpaque)
 {
-    SDL_Color c = Sdlx::MakeColor(10, 20, 30);
+    SDL_Color c = Sdlx::makeColor(10, 20, 30);
 
     EXPECT_EQ(c.r, 10);
     EXPECT_EQ(c.g, 20);
@@ -181,45 +181,45 @@ TEST(HelpersTest, MakeColorSetsFieldsAndIsOpaque)
 
 TEST(LoadSurfaceTest, LoadsBmp)
 {
-    SurfacePtr source(NewSurface(4, 2, RED));
-    Fill(source.get(), SDL_Rect{2, 0, 2, 2}, GREEN);
+    SurfacePtr source(newSurface(4, 2, RED));
+    fill(source.get(), SDL_Rect{2, 0, 2, 2}, GREEN);
     TempFile file("sdlx_test_load.bmp");
     ASSERT_TRUE(SDL_SaveBMP(source.get(), file.path.c_str())) << SDL_GetError();
 
-    SurfacePtr image(Sdlx::LoadSurface(file.path.c_str()));
+    SurfacePtr image(Sdlx::loadSurface(file.path.c_str()));
 
     ASSERT_NE(image.get(), nullptr) << SDL_GetError();
     EXPECT_EQ(image.get()->w, 4);
     EXPECT_EQ(image.get()->h, 2);
-    EXPECT_EQ(At(image.get(), 0, 0), RED);
-    EXPECT_EQ(At(image.get(), 3, 1), GREEN);
+    EXPECT_EQ(at(image.get(), 0, 0), RED);
+    EXPECT_EQ(at(image.get(), 3, 1), GREEN);
 }
 
 TEST(LoadSurfaceTest, LoadsPng)
 {
     TempFile file("sdlx_test_load.png");
-    ASSERT_TRUE(WriteFile(file.path, BLUE_3X3_PNG, sizeof(BLUE_3X3_PNG)));
+    ASSERT_TRUE(writeFile(file.path, BLUE_3X3_PNG, sizeof(BLUE_3X3_PNG)));
 
-    SurfacePtr image(Sdlx::LoadSurface(file.path.c_str()));
+    SurfacePtr image(Sdlx::loadSurface(file.path.c_str()));
 
     ASSERT_NE(image.get(), nullptr) << SDL_GetError();
     EXPECT_EQ(image.get()->w, 3);
     EXPECT_EQ(image.get()->h, 3);
-    EXPECT_EQ(At(image.get(), 1, 1), BLUE);
+    EXPECT_EQ(at(image.get(), 1, 1), BLUE);
 }
 
 TEST(LoadSurfaceTest, MissingFileReturnsNull)
 {
-    EXPECT_EQ(Sdlx::LoadSurface("this/file/does/not/exist.png"), nullptr);
+    EXPECT_EQ(Sdlx::loadSurface("this/file/does/not/exist.png"), nullptr);
 }
 
 TEST(LoadColorKeyedSurfaceTest, SetsColorKey)
 {
-    SurfacePtr source(NewSurface(2, 1, MAGENTA));
+    SurfacePtr source(newSurface(2, 1, MAGENTA));
     TempFile file("sdlx_test_key.bmp");
     ASSERT_TRUE(SDL_SaveBMP(source.get(), file.path.c_str())) << SDL_GetError();
 
-    SurfacePtr image(Sdlx::LoadColorKeyedSurface(file.path.c_str(), SDL_Color{255, 0, 255, 255}));
+    SurfacePtr image(Sdlx::loadColorKeyedSurface(file.path.c_str(), SDL_Color{255, 0, 255, 255}));
 
     ASSERT_NE(image.get(), nullptr) << SDL_GetError();
     EXPECT_TRUE(SDL_SurfaceHasColorKey(image.get()));
@@ -231,33 +231,33 @@ TEST(LoadColorKeyedSurfaceTest, SetsColorKey)
 
 TEST(LoadColorKeyedSurfaceTest, KeyedPixelsAreNotBlitted)
 {
-    SurfacePtr source(NewSurface(2, 1, MAGENTA));
-    Fill(source.get(), SDL_Rect{1, 0, 1, 1}, RED);
+    SurfacePtr source(newSurface(2, 1, MAGENTA));
+    fill(source.get(), SDL_Rect{1, 0, 1, 1}, RED);
     TempFile file("sdlx_test_keyblit.bmp");
     ASSERT_TRUE(SDL_SaveBMP(source.get(), file.path.c_str())) << SDL_GetError();
 
-    SurfacePtr image(Sdlx::LoadColorKeyedSurface(file.path.c_str(), SDL_Color{255, 0, 255, 255}));
+    SurfacePtr image(Sdlx::loadColorKeyedSurface(file.path.c_str(), SDL_Color{255, 0, 255, 255}));
     ASSERT_NE(image.get(), nullptr) << SDL_GetError();
 
-    SurfacePtr dst(NewSurface(2, 1, BLUE));
+    SurfacePtr dst(newSurface(2, 1, BLUE));
     ASSERT_TRUE(SDL_BlitSurface(image.get(), nullptr, dst.get(), nullptr)) << SDL_GetError();
 
-    EXPECT_EQ(At(dst.get(), 0, 0), BLUE); // the key color is transparent
-    EXPECT_EQ(At(dst.get(), 1, 0), RED);
+    EXPECT_EQ(at(dst.get(), 0, 0), BLUE); // the key color is transparent
+    EXPECT_EQ(at(dst.get(), 1, 0), RED);
 }
 
 TEST(LoadColorKeyedSurfaceTest, PalettedImageIsConvertedToTrueColor)
 {
     TempFile file("sdlx_test_palette.bmp");
-    ASSERT_TRUE(SavePalettedBmp(file.path, {SDL_Color{255, 0, 255, 255}, SDL_Color{255, 0, 0, 255}})) << SDL_GetError();
+    ASSERT_TRUE(savePalettedBmp(file.path, {SDL_Color{255, 0, 255, 255}, SDL_Color{255, 0, 0, 255}})) << SDL_GetError();
 
     // Check that the file really is loaded as a paletted surface, or the other
     // paletted tests would prove nothing.
-    SurfacePtr plain(Sdlx::LoadSurface(file.path.c_str()));
+    SurfacePtr plain(Sdlx::loadSurface(file.path.c_str()));
     ASSERT_NE(plain.get(), nullptr) << SDL_GetError();
     ASSERT_TRUE(SDL_ISPIXELFORMAT_INDEXED(plain.get()->format));
 
-    SurfacePtr image(Sdlx::LoadColorKeyedSurface(file.path.c_str(), SDL_Color{255, 0, 255, 255}));
+    SurfacePtr image(Sdlx::loadColorKeyedSurface(file.path.c_str(), SDL_Color{255, 0, 255, 255}));
 
     ASSERT_NE(image.get(), nullptr) << SDL_GetError();
     EXPECT_FALSE(SDL_ISPIXELFORMAT_INDEXED(image.get()->format));
@@ -269,45 +269,45 @@ TEST(LoadColorKeyedSurfaceTest, PalettedImageIsConvertedToTrueColor)
 TEST(LoadColorKeyedSurfaceTest, PalettedImageWithoutTheKeyColorHasNoTransparentPixels)
 {
     // Pink is the palette entry nearest to the magenta key, but it is not the key
-    Pixel const PINK = {255, 0, 200};
+    constexpr Pixel PINK = {255, 0, 200};
     TempFile file("sdlx_test_palette_nokey.bmp");
-    ASSERT_TRUE(SavePalettedBmp(file.path, {SDL_Color{255, 0, 200, 255}, SDL_Color{255, 0, 0, 255}})) << SDL_GetError();
+    ASSERT_TRUE(savePalettedBmp(file.path, {SDL_Color{255, 0, 200, 255}, SDL_Color{255, 0, 0, 255}})) << SDL_GetError();
 
-    SurfacePtr image(Sdlx::LoadColorKeyedSurface(file.path.c_str(), SDL_Color{255, 0, 255, 255}));
+    SurfacePtr image(Sdlx::loadColorKeyedSurface(file.path.c_str(), SDL_Color{255, 0, 255, 255}));
     ASSERT_NE(image.get(), nullptr) << SDL_GetError();
 
-    SurfacePtr dst(NewSurface(2, 1, BLUE));
+    SurfacePtr dst(newSurface(2, 1, BLUE));
     ASSERT_TRUE(SDL_BlitSurface(image.get(), nullptr, dst.get(), nullptr)) << SDL_GetError();
 
-    EXPECT_EQ(At(dst.get(), 0, 0), PINK);
-    EXPECT_EQ(At(dst.get(), 1, 0), RED);
+    EXPECT_EQ(at(dst.get(), 0, 0), PINK);
+    EXPECT_EQ(at(dst.get(), 1, 0), RED);
 }
 
 TEST(LoadColorKeyedSurfaceTest, EveryPaletteEntryOfTheKeyColorIsTransparent)
 {
     TempFile file("sdlx_test_palette_twice.bmp");
-    ASSERT_TRUE(SavePalettedBmp(file.path,
+    ASSERT_TRUE(savePalettedBmp(file.path,
                                 {SDL_Color{255, 0, 255, 255}, SDL_Color{255, 0, 0, 255}, SDL_Color{255, 0, 255, 255}}))
         << SDL_GetError();
 
-    SurfacePtr image(Sdlx::LoadColorKeyedSurface(file.path.c_str(), SDL_Color{255, 0, 255, 255}));
+    SurfacePtr image(Sdlx::loadColorKeyedSurface(file.path.c_str(), SDL_Color{255, 0, 255, 255}));
     ASSERT_NE(image.get(), nullptr) << SDL_GetError();
 
-    SurfacePtr dst(NewSurface(3, 1, BLUE));
+    SurfacePtr dst(newSurface(3, 1, BLUE));
     ASSERT_TRUE(SDL_BlitSurface(image.get(), nullptr, dst.get(), nullptr)) << SDL_GetError();
 
-    EXPECT_EQ(At(dst.get(), 0, 0), BLUE);
-    EXPECT_EQ(At(dst.get(), 1, 0), RED);
-    EXPECT_EQ(At(dst.get(), 2, 0), BLUE);
+    EXPECT_EQ(at(dst.get(), 0, 0), BLUE);
+    EXPECT_EQ(at(dst.get(), 1, 0), RED);
+    EXPECT_EQ(at(dst.get(), 2, 0), BLUE);
 }
 
 TEST(LoadColorKeyedSurfaceTest, MissingFileReturnsNull)
 {
-    EXPECT_EQ(Sdlx::LoadColorKeyedSurface("this/file/does/not/exist.png", SDL_Color{0, 0, 0, 255}), nullptr);
+    EXPECT_EQ(Sdlx::loadColorKeyedSurface("this/file/does/not/exist.png", SDL_Color{0, 0, 0, 255}), nullptr);
 }
 
 /********************************************************************************************************************/
-/* Sprite::Draw */
+/* Sprite::draw */
 /********************************************************************************************************************/
 
 namespace
@@ -319,9 +319,9 @@ class SpriteDrawTest : public ::testing::Test
   protected:
     void SetUp() override
     {
-        sheet.reset(new SurfacePtr(NewSurface(8, 8, RED)));
-        Fill(sheet->get(), SDL_Rect{4, 0, 4, 8}, GREEN);
-        dst.reset(new SurfacePtr(NewSurface(32, 32, BLACK)));
+        sheet.reset(new SurfacePtr(newSurface(8, 8, RED)));
+        fill(sheet->get(), SDL_Rect{4, 0, 4, 8}, GREEN);
+        dst.reset(new SurfacePtr(newSurface(32, 32, BLACK)));
     }
 
     std::unique_ptr<SurfacePtr> sheet;
@@ -333,63 +333,63 @@ class SpriteDrawTest : public ::testing::Test
 TEST_F(SpriteDrawTest, DrawsSubRegionAtPositionMinusOffset)
 {
     Sdlx::Sprite sprite(sheet->get(), SDL_Rect{4, 0, 4, 8}, 1, 1, 10.0f, 10.0f);
-    sprite.Draw(dst->get());
+    sprite.draw(dst->get());
 
     // Drawn at (9, 9), size 4x8
-    EXPECT_EQ(At(dst->get(), 9, 9), GREEN);
-    EXPECT_EQ(At(dst->get(), 12, 16), GREEN);
-    EXPECT_EQ(At(dst->get(), 8, 9), BLACK);
-    EXPECT_EQ(At(dst->get(), 13, 9), BLACK);
-    EXPECT_EQ(At(dst->get(), 9, 8), BLACK);
-    EXPECT_EQ(At(dst->get(), 9, 17), BLACK);
+    EXPECT_EQ(at(dst->get(), 9, 9), GREEN);
+    EXPECT_EQ(at(dst->get(), 12, 16), GREEN);
+    EXPECT_EQ(at(dst->get(), 8, 9), BLACK);
+    EXPECT_EQ(at(dst->get(), 13, 9), BLACK);
+    EXPECT_EQ(at(dst->get(), 9, 8), BLACK);
+    EXPECT_EQ(at(dst->get(), 9, 17), BLACK);
 }
 
 TEST_F(SpriteDrawTest, EmptyRectDrawsWholeSheet)
 {
     Sdlx::Sprite sprite(sheet->get(), SDL_Rect{0, 0, 0, 0}, 0, 0, 2.0f, 3.0f);
-    sprite.Draw(dst->get());
+    sprite.draw(dst->get());
 
-    EXPECT_EQ(At(dst->get(), 2, 3), RED);
-    EXPECT_EQ(At(dst->get(), 5, 3), RED);
-    EXPECT_EQ(At(dst->get(), 6, 3), GREEN);
-    EXPECT_EQ(At(dst->get(), 9, 10), GREEN);
-    EXPECT_EQ(At(dst->get(), 10, 10), BLACK);
+    EXPECT_EQ(at(dst->get(), 2, 3), RED);
+    EXPECT_EQ(at(dst->get(), 5, 3), RED);
+    EXPECT_EQ(at(dst->get(), 6, 3), GREEN);
+    EXPECT_EQ(at(dst->get(), 9, 10), GREEN);
+    EXPECT_EQ(at(dst->get(), 10, 10), BLACK);
 }
 
 TEST_F(SpriteDrawTest, PositionIsRoundedToNearestPixel)
 {
     Sdlx::Sprite down(sheet->get(), SDL_Rect{0, 0, 0, 0}, 0, 0, 10.4f, 10.4f);
-    down.Draw(dst->get());
-    EXPECT_EQ(At(dst->get(), 10, 10), RED);
-    EXPECT_EQ(At(dst->get(), 9, 10), BLACK);
+    down.draw(dst->get());
+    EXPECT_EQ(at(dst->get(), 10, 10), RED);
+    EXPECT_EQ(at(dst->get(), 9, 10), BLACK);
 
-    SurfacePtr other(NewSurface(32, 32, BLACK));
+    SurfacePtr other(newSurface(32, 32, BLACK));
     Sdlx::Sprite up(sheet->get(), SDL_Rect{0, 0, 0, 0}, 0, 0, 10.6f, 10.6f);
-    up.Draw(other.get());
-    EXPECT_EQ(At(other.get(), 11, 11), RED);
-    EXPECT_EQ(At(other.get(), 10, 10), BLACK);
+    up.draw(other.get());
+    EXPECT_EQ(at(other.get(), 11, 11), RED);
+    EXPECT_EQ(at(other.get(), 10, 10), BLACK);
 }
 
 TEST_F(SpriteDrawTest, NegativePositionIsRoundedToNearestPixel)
 {
     // -1.2 rounds to -1, so the first column and row of the sheet are clipped
     Sdlx::Sprite up(sheet->get(), SDL_Rect{0, 0, 0, 0}, 0, 0, -1.2f, -1.2f);
-    up.Draw(dst->get());
-    EXPECT_EQ(At(dst->get(), 2, 0), RED);
-    EXPECT_EQ(At(dst->get(), 3, 0), GREEN);
-    EXPECT_EQ(At(dst->get(), 6, 6), GREEN);
-    EXPECT_EQ(At(dst->get(), 7, 0), BLACK);
-    EXPECT_EQ(At(dst->get(), 0, 7), BLACK);
+    up.draw(dst->get());
+    EXPECT_EQ(at(dst->get(), 2, 0), RED);
+    EXPECT_EQ(at(dst->get(), 3, 0), GREEN);
+    EXPECT_EQ(at(dst->get(), 6, 6), GREEN);
+    EXPECT_EQ(at(dst->get(), 7, 0), BLACK);
+    EXPECT_EQ(at(dst->get(), 0, 7), BLACK);
 
     // -1.6 rounds to -2
-    SurfacePtr other(NewSurface(32, 32, BLACK));
+    SurfacePtr other(newSurface(32, 32, BLACK));
     Sdlx::Sprite down(sheet->get(), SDL_Rect{0, 0, 0, 0}, 0, 0, -1.6f, -1.6f);
-    down.Draw(other.get());
-    EXPECT_EQ(At(other.get(), 1, 0), RED);
-    EXPECT_EQ(At(other.get(), 2, 0), GREEN);
-    EXPECT_EQ(At(other.get(), 5, 5), GREEN);
-    EXPECT_EQ(At(other.get(), 6, 0), BLACK);
-    EXPECT_EQ(At(other.get(), 0, 6), BLACK);
+    down.draw(other.get());
+    EXPECT_EQ(at(other.get(), 1, 0), RED);
+    EXPECT_EQ(at(other.get(), 2, 0), GREEN);
+    EXPECT_EQ(at(other.get(), 5, 5), GREEN);
+    EXPECT_EQ(at(other.get(), 6, 0), BLACK);
+    EXPECT_EQ(at(other.get(), 0, 6), BLACK);
 }
 
 TEST_F(SpriteDrawTest, NewAnimatedSpriteDrawsItsFirstFrameNotTheWholeSheet)
@@ -401,13 +401,13 @@ TEST_F(SpriteDrawTest, NewAnimatedSpriteDrawsItsFirstFrameNotTheWholeSheet)
     animation.frames = {{0, 1.0f}, {1, 1.0f}};
     group.animations.push_back(animation);
 
-    // Drawn without calling PlayAnimation
+    // Drawn without calling playAnimation
     Sdlx::AnimatedSprite sprite(sheet->get(), &group, 4.0f, 4.0f);
-    sprite.Draw(dst->get());
+    sprite.draw(dst->get());
 
-    EXPECT_EQ(At(dst->get(), 4, 4), RED);
-    EXPECT_EQ(At(dst->get(), 7, 4), RED);
-    EXPECT_EQ(At(dst->get(), 8, 4), BLACK); // the green half of the sheet is not drawn
+    EXPECT_EQ(at(dst->get(), 4, 4), RED);
+    EXPECT_EQ(at(dst->get(), 7, 4), RED);
+    EXPECT_EQ(at(dst->get(), 8, 4), BLACK); // the green half of the sheet is not drawn
 }
 
 TEST_F(SpriteDrawTest, AnimatedSpriteWithoutAnImageDrawsNothing)
@@ -416,16 +416,16 @@ TEST_F(SpriteDrawTest, AnimatedSpriteWithoutAnImageDrawsNothing)
     // sprite with no current image must not.
     Sdlx::AnimatedSprite::AnimationGroup empty;
     Sdlx::AnimatedSprite sprite(sheet->get(), &empty, 4.0f, 4.0f);
-    sprite.Draw(dst->get());
+    sprite.draw(dst->get());
 
-    EXPECT_EQ(At(dst->get(), 4, 4), BLACK);
-    EXPECT_EQ(At(dst->get(), 8, 4), BLACK);
+    EXPECT_EQ(at(dst->get(), 4, 4), BLACK);
+    EXPECT_EQ(at(dst->get(), 8, 4), BLACK);
 
     // The same through a pointer to the base class
     Sdlx::Sprite const &base = sprite;
-    base.Draw(dst->get());
+    base.draw(dst->get());
 
-    EXPECT_EQ(At(dst->get(), 4, 4), BLACK);
+    EXPECT_EQ(at(dst->get(), 4, 4), BLACK);
 }
 
 TEST_F(SpriteDrawTest, AnimatedSpriteDrawsCurrentFrame)
@@ -439,17 +439,17 @@ TEST_F(SpriteDrawTest, AnimatedSpriteDrawsCurrentFrame)
     group.animations.push_back(animation);
 
     Sdlx::AnimatedSprite sprite(sheet->get(), &group, 4.0f, 4.0f);
-    sprite.PlayAnimation(0);
-    sprite.Draw(dst->get());
-    EXPECT_EQ(At(dst->get(), 4, 4), RED);
+    sprite.playAnimation(0);
+    sprite.draw(dst->get());
+    EXPECT_EQ(at(dst->get(), 4, 4), RED);
 
-    sprite.AdvanceTime(1.0f);
-    sprite.Draw(dst->get());
-    EXPECT_EQ(At(dst->get(), 4, 4), GREEN);
+    sprite.advanceTime(1.0f);
+    sprite.draw(dst->get());
+    EXPECT_EQ(at(dst->get(), 4, 4), GREEN);
 }
 
 /********************************************************************************************************************/
-/* EventLoop */
+/* eventLoop */
 /********************************************************************************************************************/
 
 namespace
@@ -460,7 +460,7 @@ int g_idleCalls;
 int g_stopAfter; // handler returns false after this many events (0 = until
                  // quit)
 
-void PushEvent(Uint32 type)
+void pushEvent(Uint32 type)
 {
     SDL_Event e;
     SDL_zero(e);
@@ -468,7 +468,7 @@ void PushEvent(Uint32 type)
     ASSERT_TRUE(SDL_PushEvent(&e)) << SDL_GetError();
 }
 
-bool CountingHandler(SDL_Event const &event)
+bool countingHandler(SDL_Event const &event)
 {
     ++g_events;
     if (g_stopAfter > 0 && g_events >= g_stopAfter)
@@ -478,12 +478,12 @@ bool CountingHandler(SDL_Event const &event)
     return event.type != SDL_EVENT_QUIT;
 }
 
-bool IdleThenQuit()
+bool idleThenQuit()
 {
     ++g_idleCalls;
     if (g_idleCalls == 3)
     {
-        PushEvent(SDL_EVENT_QUIT);
+        pushEvent(SDL_EVENT_QUIT);
     }
     return true;
 }
@@ -493,7 +493,7 @@ std::thread g_pusher; // pushes an event from another thread, after a delay
 // Always asks not to be called again until after the next event. The first call
 // arranges for an event to arrive later, and the first call after that event
 // has been handled ends the loop.
-bool IdleUntilAnEventIsHandled()
+bool idleUntilAnEventIsHandled()
 {
     ++g_idleCalls;
     if (g_idleCalls == 1)
@@ -508,7 +508,7 @@ bool IdleUntilAnEventIsHandled()
     }
     if (g_events > 0)
     {
-        PushEvent(SDL_EVENT_QUIT);
+        pushEvent(SDL_EVENT_QUIT);
     }
     return false;
 }
@@ -538,10 +538,10 @@ class EventLoopTest : public ::testing::Test
 
 TEST_F(EventLoopTest, DefaultHandlerReturnsOnQuit)
 {
-    PushEvent(SDL_EVENT_QUIT);
+    pushEvent(SDL_EVENT_QUIT);
 
     // This would hang if the quit event were not recognized
-    EXPECT_TRUE(Sdlx::EventLoop());
+    EXPECT_TRUE(Sdlx::eventLoop());
 }
 
 // This test is not in the EventLoopTest suite, because it needs the SDL events
@@ -552,7 +552,7 @@ TEST(EventLoopWithoutEventsTest, ReturnsFalseWhenWaitingFails)
 
     // Waiting for an event fails when the events subsystem is not initialized.
     // The loop must report that instead of waiting forever.
-    EXPECT_FALSE(Sdlx::EventLoop());
+    EXPECT_FALSE(Sdlx::eventLoop());
 }
 
 TEST(EventLoopWithoutEventsTest, ReturnsFalseWithAnIdleCallbackThatAlwaysWantsToBeCalled)
@@ -562,7 +562,7 @@ TEST(EventLoopWithoutEventsTest, ReturnsFalseWithAnIdleCallbackThatAlwaysWantsTo
     // With an idle callback, the loop polls instead of waiting. No event can
     // arrive, so it must return instead of calling the callback forever.
     g_idleCalls = 0;
-    EXPECT_FALSE(Sdlx::EventLoop(nullptr, [] {
+    EXPECT_FALSE(Sdlx::eventLoop(nullptr, [] {
         ++g_idleCalls;
         return true;
     }));
@@ -571,12 +571,12 @@ TEST(EventLoopWithoutEventsTest, ReturnsFalseWithAnIdleCallbackThatAlwaysWantsTo
 
 TEST_F(EventLoopTest, HandlerSeesEveryEventUntilQuit)
 {
-    PushEvent(SDL_EVENT_USER);
-    PushEvent(SDL_EVENT_USER);
-    PushEvent(SDL_EVENT_USER);
-    PushEvent(SDL_EVENT_QUIT);
+    pushEvent(SDL_EVENT_USER);
+    pushEvent(SDL_EVENT_USER);
+    pushEvent(SDL_EVENT_USER);
+    pushEvent(SDL_EVENT_QUIT);
 
-    Sdlx::EventLoop(CountingHandler);
+    Sdlx::eventLoop(countingHandler);
 
     EXPECT_EQ(g_events, 4);
 }
@@ -584,18 +584,18 @@ TEST_F(EventLoopTest, HandlerSeesEveryEventUntilQuit)
 TEST_F(EventLoopTest, HandlerReturningFalseStopsTheLoop)
 {
     g_stopAfter = 2;
-    PushEvent(SDL_EVENT_USER);
-    PushEvent(SDL_EVENT_USER);
-    PushEvent(SDL_EVENT_USER);
+    pushEvent(SDL_EVENT_USER);
+    pushEvent(SDL_EVENT_USER);
+    pushEvent(SDL_EVENT_USER);
 
-    Sdlx::EventLoop(CountingHandler);
+    Sdlx::eventLoop(countingHandler);
 
     EXPECT_EQ(g_events, 2);
 }
 
 TEST_F(EventLoopTest, IdleCallbackRunsWhenThereAreNoEvents)
 {
-    Sdlx::EventLoop(nullptr, IdleThenQuit);
+    Sdlx::eventLoop(nullptr, idleThenQuit);
 
     EXPECT_EQ(g_idleCalls, 3);
 }
@@ -605,7 +605,7 @@ TEST_F(EventLoopTest, IdleCallbackReturningFalseIsNotCalledAgainUntilNextEvent)
     // After the first idle call returns false, the loop must block until the
     // event from the other thread arrives. If it kept calling the idle callback
     // instead, the callback would be called many times during the delay.
-    Sdlx::EventLoop(CountingHandler, IdleUntilAnEventIsHandled);
+    Sdlx::eventLoop(countingHandler, idleUntilAnEventIsHandled);
     g_pusher.join();
 
     EXPECT_EQ(g_idleCalls, 2);

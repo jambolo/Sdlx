@@ -42,7 +42,7 @@ public:
 
 	//! Constructor
 	Sprite( SDL_Surface *		sheet,
-			SDL_Rect const &	rect = MakeRect( 0, 0, 0, 0 ),
+			SDL_Rect const &	rect = SDL_Rect{ 0, 0, 0, 0 },
 			int					offsetX = 0,
 			int					offsetY = 0,
 			float				x = 0,

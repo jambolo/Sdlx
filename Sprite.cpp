@@ -13,6 +13,9 @@
 
 #include "Sprite.h"
 
+#include <algorithm>
+#include <cassert>
+
 namespace Sdlx
 {
 
@@ -75,13 +78,14 @@ Sprite::~Sprite()
 
 void Sprite::Draw( SDL_Surface * dst ) const
 {
-	int		rv;
+	bool	ok;
 
 	SDL_Rect			position	= { int( m_x - m_offsetX + 0.5f ), int( m_y - m_offsetY + 0.5f ), 0, 0 };
 	SDL_Rect const *	pRect		= ( m_rect.w > 0 && m_rect.h > 0 ) ? &m_rect : NULL;
 
-	rv = SDL_BlitSurface( m_sheet, const_cast< SDL_Rect * >( pRect ), dst, &position );
-	assert( rv == 0 );
+	ok = SDL_BlitSurface( m_sheet, pRect, dst, &position );
+	assert( ok );
+	(void)ok;
 }
 
 
@@ -117,7 +121,7 @@ AnimatedSprite::AnimatedSprite( SDL_Surface *			sheet,
 								AnimationGroup const *	animations,
 								float 					x/* = 0*/,
 								float 					y/* = 0*/ )
-	:	Sprite( sheet, MakeRect( 0, 0, 0, 0 ), 0, 0, x, y ),
+	:	Sprite( sheet, SDL_Rect{ 0, 0, 0, 0 }, 0, 0, x, y ),
 		m_pAnimations( animations ),
 		m_currentAnimation( 0 ),
 		m_currentFrame( 0 ),

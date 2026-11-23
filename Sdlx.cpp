@@ -13,12 +13,14 @@
 
 #include "Sdlx.h"
 
+#include <SDL3_image/SDL_image.h>
+
 namespace
 {
 
 	bool DefaultEventLoopEventHandler( SDL_Event const & event )
 	{
-		return ( event.type != SDL_QUIT );
+		return ( event.type != SDL_EVENT_QUIT );
 	}
 
 
@@ -33,8 +35,7 @@ namespace Sdlx
 /*																													*/
 /********************************************************************************************************************/
 
-//! This function loads an image file and converts it to the format of the display.
-//! All image formats supported by SDL_image can be loaded. Currently, they are:
+//! This function loads an image file. All image formats supported by SDL3_image can be loaded. Currently, they are:
 //!		- BMP
 //!		- JPEG
 //!		- PNG
@@ -42,24 +43,15 @@ namespace Sdlx
 //!		- TGA
 //!		- and more
 //!
+//! SDL3 has no "display format", so the image is returned in the format in which it was loaded.
+//!
 //! @param	filename	name of the file to load
 //!
-//! @return		pointer to the loaded file, or 0 if error
+//! @return		pointer to the loaded surface (free with SDL_DestroySurface), or 0 if error
 
-SDL_Surface * LoadImage( char const * filename ) 
+SDL_Surface * LoadImage( char const * filename )
 {
-	SDL_Surface *	loadedImage		= 0;
-	SDL_Surface *	image			= 0;
-
-	loadedImage = IMG_Load( filename );
-
-	if ( loadedImage != 0 )
-	{
-		image = SDL_DisplayFormat( loadedImage );	// Create an optimized image from the loaded image
-		SDL_FreeSurface( loadedImage );				// Free the old image
-	}
-
-	return image;
+	return IMG_Load( filename );
 }
 
 
@@ -67,10 +59,9 @@ SDL_Surface * LoadImage( char const * filename )
 /*																													*/
 /********************************************************************************************************************/
 
-//! This function loads an image file and converts it to the format of the display. In addition, a color key is
-//! specified.
+//! This function loads an image file. In addition, a color key is specified.
 //!
-//! All image formats supported by SDL_image can be loaded. Currently, they are:
+//! All image formats supported by SDL3_image can be loaded. Currently, they are:
 //!		- BMP
 //!		- JPEG
 //!		- PNG
@@ -88,8 +79,9 @@ SDL_Surface * LoadColorKeyedImage( char const * filename, SDL_Color key )
 
 	if ( image != 0 )
     {
-		Uint32 colorkey = SDL_MapRGB( image->format, key.r, key.g, key.b );
-		SDL_SetColorKey( image, SDL_RLEACCEL | SDL_SRCCOLORKEY, colorkey );
+		Uint32 colorkey = SDL_MapSurfaceRGB( image, key.r, key.g, key.b );
+		SDL_SetSurfaceColorKey( image, true, colorkey );
+		SDL_SetSurfaceRLE( image, true );
     }
 
 	return image;
@@ -100,7 +92,7 @@ SDL_Surface * LoadColorKeyedImage( char const * filename, SDL_Color key )
 /*																													*/
 /********************************************************************************************************************/
 
-//! This function handles SDL events until a SDL_QUIT event is received. If an idle processing callback is
+//! This function handles SDL events until a SDL_EVENT_QUIT event is received. If an idle processing callback is
 //! specified, it is called whenever there are no events to process. If the callback returns @c false, then
 //! it will not be called again until after the next event occurs.
 //!
@@ -120,11 +112,26 @@ void EventLoop( EventLoopEventHandler pEH/* = 0*/, EventLoopIdleCallback pIdle/*
 	while ( !done )
 	{
 		SDL_Event	event;
+		bool		haveEvent;
 
-		// Get an event. If there is none to process, then if we are skipping the idle function then 
-		// just sleep, otherwise call the idle function.
+		// Get an event. If there is no idle function to call (or it no longer needs to be called), then block until
+		// an event arrives, otherwise just check for one.
 
-		if ( SDL_PollEvent( &event ) != 0 )
+		if ( skipIdle || pIdle == 0 )
+		{
+			haveEvent = SDL_WaitEvent( &event );
+
+			if ( !haveEvent )
+			{
+				SDL_Delay( 1 );		// Don't spin if waiting failed
+			}
+		}
+		else
+		{
+			haveEvent = SDL_PollEvent( &event );
+		}
+
+		if ( haveEvent )
 		{
 			// Call the event handler. If it returns false, then we should exit.
 			done = !(*pEH)( event );
@@ -133,7 +140,7 @@ void EventLoop( EventLoopEventHandler pEH/* = 0*/, EventLoopIdleCallback pIdle/*
         }
 		else if ( skipIdle || pIdle == 0 )
 		{
-			SDL_Delay( 0 );
+			// Nothing to do
 		}
 		else
 		{
@@ -151,24 +158,19 @@ void EventLoop( EventLoopEventHandler pEH/* = 0*/, EventLoopIdleCallback pIdle/*
 /********************************************************************************************************************/
 
 //! This function is basically a convenience. SDL structs lack constructors, so this acts as a constructor for
-//! @c SDL_Color.
+//! @c SDL_Color. The alpha component is set to opaque.
 //!
 //! @param	red		red component. The valid range is 0 - 255.
 //! @param	green	green component. The valid range is 0 - 255.
 //! @param	blue	blue component. The valid range is 0 - 255.
+//!
+//! @deprecated	Use brace initialization instead: <tt>SDL_Color{ r, g, b, 255 }</tt>.
 
 SDL_Color MakeColor( int red, int green, int blue )
 {
-	SDL_Color	color	= { red, green, blue };
+	SDL_Color	color	= { Uint8( red ), Uint8( green ), Uint8( blue ), 255 };
 
 	return color;
-}
-
-int foo( int a, int b, int c )
-{
-	SDL_Color	color	= { a, b, c };
-
-	return 0;
 }
 
 
@@ -183,6 +185,8 @@ int foo( int a, int b, int c )
 //! @param	y	y
 //! @param	w	width
 //! @param	h	height
+//!
+//! @deprecated	Use brace initialization instead: <tt>SDL_Rect{ x, y, w, h }</tt>.
 
 SDL_Rect MakeRect( int x, int y, int w, int h )
 {

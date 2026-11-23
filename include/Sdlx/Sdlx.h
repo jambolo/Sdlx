@@ -18,7 +18,7 @@
 
 namespace Sdlx
 {
-	//! Loads an image file.
+	//! Loads an image file (using SDL3_image). Free the result with SDL_DestroySurface.
 	SDL_Surface * LoadImage( char const * filename );
 
 	//! Loads an image file and applies a color key
@@ -30,13 +30,15 @@ namespace Sdlx
 	//! Event loop event handler
 	typedef bool (*EventLoopEventHandler)( SDL_Event const & event );
 
-	//! Handle events until a SDL_QUIT event is received.
+	//! Handle events until a SDL_EVENT_QUIT event is received.
 	void EventLoop( EventLoopEventHandler pEH = 0, EventLoopIdleCallback pCB = 0 );
 
-	//! Returns a color with the specified values
+	//! Returns an opaque color with the specified values
+	[[deprecated( "Use SDL_Color{ r, g, b, 255 } instead" )]]
 	SDL_Color MakeColor( int red, int green, int blue );
 
 	//! Returns a rect with the specified values
+	[[deprecated( "Use SDL_Rect{ x, y, w, h } instead" )]]
 	SDL_Rect MakeRect( int x, int y, int w, int h );
 
 } // namespace Sdlx

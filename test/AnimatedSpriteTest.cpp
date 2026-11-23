@@ -83,6 +83,82 @@ TEST_F(AnimatedSpriteTest, ConstructorSetsPosition)
     EXPECT_EQ(sprite.GetTime(), 0.0f);
 }
 
+TEST_F(AnimatedSpriteTest, ConstructorSelectsFirstFrameOfFirstAnimation)
+{
+    // Make the first frame something other than image 0, whose values are mostly zero
+    group.animations[0].frames[0].index = 2;
+
+    AnimatedSprite sprite(nullptr, &group);
+
+    EXPECT_EQ(sprite.rect_.x, 20);
+    EXPECT_EQ(sprite.rect_.w, 10);
+    EXPECT_EQ(sprite.rect_.h, 10);
+    EXPECT_EQ(sprite.offsetX_, 2);
+    EXPECT_EQ(sprite.offsetY_, 4);
+}
+
+TEST(AnimatedSpriteEmptyGroupTest, SpriteHasNoImageAndAnimationFunctionsDoNothing)
+{
+    AnimationGroup empty;
+    AnimatedSprite sprite(nullptr, &empty);
+
+    sprite.AdvanceTime(1.0f);
+    sprite.Service(1.0f);
+    sprite.SetTime(2.0f);
+    sprite.SetFrame(1);
+
+    EXPECT_EQ(sprite.GetAnimation(), 0);
+    EXPECT_EQ(sprite.GetFrame(), 0);
+    EXPECT_EQ(sprite.GetTime(), 0.0f);
+    EXPECT_EQ(sprite.rect_.w, 0);
+    EXPECT_EQ(sprite.rect_.h, 0);
+}
+
+TEST_F(AnimatedSpriteTest, AnimationWithNoFramesHasNoImage)
+{
+    for (int mode : {Animation::MODE_ONCE, Animation::MODE_LOOP, Animation::MODE_PINGPONG})
+    {
+        Animation none;
+        none.mode = Animation::Mode(mode);
+        group.animations.push_back(none);
+        int const index = int(group.animations.size()) - 1;
+
+        AnimatedSprite sprite(nullptr, &group);
+        sprite.PlayAnimation(index, AnimatedSprite::DIR_BACKWARD);
+        EXPECT_EQ(sprite.GetAnimation(), index);
+        EXPECT_EQ(sprite.GetFrame(), 0);
+        EXPECT_EQ(sprite.rect_.w, 0);
+
+        sprite.AdvanceTime(1.5f); // must not read a frame
+        EXPECT_EQ(sprite.GetFrame(), 0);
+        EXPECT_FLOAT_EQ(sprite.GetTime(), 1.5f);
+
+        sprite.SetTime(2.5f);
+        EXPECT_EQ(sprite.GetFrame(), 0);
+        EXPECT_FLOAT_EQ(sprite.GetTime(), 2.5f);
+        EXPECT_EQ(sprite.rect_.w, 0);
+    }
+}
+
+TEST(AnimationGroupTest, MembersHaveDefaultValues)
+{
+    Animation animation;
+    EXPECT_EQ(animation.mode, Animation::MODE_ONCE);
+    EXPECT_TRUE(animation.frames.empty());
+
+    AnimatedSprite::Frame frame;
+    EXPECT_EQ(frame.index, 0);
+    EXPECT_EQ(frame.time, 0.0f);
+
+    AnimationGroup::Image image;
+    EXPECT_EQ(image.rect.x, 0);
+    EXPECT_EQ(image.rect.y, 0);
+    EXPECT_EQ(image.rect.w, 0);
+    EXPECT_EQ(image.rect.h, 0);
+    EXPECT_EQ(image.offsetX, 0);
+    EXPECT_EQ(image.offsetY, 0);
+}
+
 TEST_F(AnimatedSpriteTest, PlayAnimationForwardStartsAtFirstFrame)
 {
     AnimatedSprite sprite(nullptr, &group);

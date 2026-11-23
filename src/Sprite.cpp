@@ -7,47 +7,20 @@
 namespace Sdlx
 {
 
-/********************************************************************************************************************/
-/*																													*/
-/********************************************************************************************************************/
-
 Sprite::Sprite() : x_(0), y_(0), rect_(SDL_Rect{0, 0, 0, 0}), offsetX_(0), offsetY_(0), sheet_(0)
 {
 }
 
-/********************************************************************************************************************/
-/*																													*/
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
-/*																													*/
-/********************************************************************************************************************/
-
-//! @param	sheet				SDL_Surface containing the
-//! sprite's image
-//! @param	rect				The location and size of the
-//! sprite's image on the sheet
+//! @param	sheet				SDL_Surface containing the sprite's image
+//! @param	rect				The location and size of the sprite's image on the sheet
 //! @param	offsetX,offsetY		Offset to the origin of the sprite
-//! @param	x,y					Initial location of the
-//! sprite
+//! @param	x,y					Initial location of the sprite
 
 Sprite::Sprite(SDL_Surface *sheet, SDL_Rect const &rect /* = SDL_Rect{0, 0, 0, 0}*/, int offsetX /* = 0*/,
                int offsetY /* = 0*/, float x /* = 0*/, float y /* = 0*/)
     : x_(x), y_(y), rect_(rect), offsetX_(offsetX), offsetY_(offsetY), sheet_(sheet)
 {
 }
-
-/********************************************************************************************************************/
-/*																													*/
-/********************************************************************************************************************/
-
-Sprite::~Sprite()
-{
-}
-
-/********************************************************************************************************************/
-/*																													*/
-/********************************************************************************************************************/
 
 //! The position is rounded to the nearest pixel.
 //!
@@ -66,18 +39,10 @@ void Sprite::Draw(SDL_Surface *dst) const
     (void)ok;
 }
 
-/********************************************************************************************************************/
-/*																													*/
-/********************************************************************************************************************/
-
 AnimatedSprite::AnimatedSprite()
     : pAnimations_(0), currentAnimation_(0), currentFrame_(0), time_(0.0f), frameTime_(0.0f), direction_(DIR_FORWARD)
 {
 }
-
-/********************************************************************************************************************/
-/*																													*/
-/********************************************************************************************************************/
 
 //!
 //! @param	sheet			SDL_Surface containing the sprite's
@@ -87,25 +52,17 @@ AnimatedSprite::AnimatedSprite()
 //!
 //! @note	The sprite does not assume ownership of the animation group, so
 //! it can be shared by many sprites.
+//! @note	The sprite starts on the first frame of the first animation, as
+//! if PlayAnimation( 0 ) had been called.
 
 AnimatedSprite::AnimatedSprite(SDL_Surface *sheet, AnimationGroup const *animations, float x /* = 0*/, float y /* = 0*/)
     : Sprite(sheet, SDL_Rect{0, 0, 0, 0}, 0, 0, x, y), pAnimations_(animations), currentAnimation_(0), currentFrame_(0),
       time_(0.0f), frameTime_(0.0f), direction_(DIR_FORWARD)
 {
     assert(animations != 0);
+
+    UpdateImage();
 }
-
-/********************************************************************************************************************/
-/*																													*/
-/********************************************************************************************************************/
-
-AnimatedSprite::~AnimatedSprite()
-{
-}
-
-/********************************************************************************************************************/
-/*																													*/
-/********************************************************************************************************************/
 
 //! This function starts a sprite's animation. The initial frame depends on the
 //! direction of play.
@@ -114,7 +71,7 @@ AnimatedSprite::~AnimatedSprite()
 //! @param	direction		Which direction to play the animation
 //!
 //! @note	This function does nothing if the sprite has no animation group
-//! (it was default-constructed).
+//! (it was default-constructed) or the group has no such animation.
 
 void AnimatedSprite::PlayAnimation(int index, Direction direction /* = DIR_FORWARD*/)
 {
@@ -125,52 +82,42 @@ void AnimatedSprite::PlayAnimation(int index, Direction direction /* = DIR_FORWA
     }
 
     assert(index >= 0 && index < int(pAnimations_->animations.size()));
+    if (index < 0 || index >= int(pAnimations_->animations.size()))
+    {
+        return;
+    }
 
-    Animation const &animation = pAnimations_->animations[index]; // Convenience
-    Animation::FrameList const &frames = animation.frames;        // Convenience
+    Animation::FrameList const &frames = pAnimations_->animations[index].frames; // Convenience
 
     currentAnimation_ = index;
     direction_ = direction;
-    currentFrame_ = (direction == DIR_FORWARD) ? 0 : int(frames.size()) - 1;
+    currentFrame_ = (direction == DIR_FORWARD || frames.empty()) ? 0 : int(frames.size()) - 1;
     time_ = 0.0f;
     frameTime_ = 0.0f;
 
-    // Set the image location and size according to the current frame
-
-    Frame const &frame = frames[currentFrame_];                     // Convenience
-    AnimationGroup::ImageList const &images = pAnimations_->images; // Convenience
-    AnimationGroup::Image const &image = images[frame.index];       // Convenience
-
-    rect_ = image.rect;
-    offsetX_ = image.offsetX;
-    offsetY_ = image.offsetY;
+    UpdateImage();
 }
-
-/********************************************************************************************************************/
-/*																													*/
-/********************************************************************************************************************/
 
 //! This function sets the animation time to an absolute value and updates the
 //! animation to reflect the new time.
 //!
 //! @param	time	new time
 //!
-//! @note If the mode is ping-pong, then the initial direction is assumed to be
-//! forward.
-//! @note	This function does nothing if the sprite has no animation group
-//! (it was default-constructed).
+//! @note   If the mode is ping-pong, then the initial direction is assumed to be forward.
+//! @note   This function does nothing if the sprite has no animation group  (it was default-constructed) or the group
+//!         has no animations.
 
 void AnimatedSprite::SetTime(float time)
 {
     assert(pAnimations_ != 0);
-    if (pAnimations_ == 0)
+
+    Animation const *pAnimation = CurrentAnimation();
+    if (pAnimation == 0)
     {
         return;
     }
 
-    Animation const &animation = pAnimations_->animations[currentAnimation_]; // Convenience
-
-    if (animation.mode == Animation::MODE_PINGPONG)
+    if (pAnimation->mode == Animation::MODE_PINGPONG)
     {
         direction_ = DIR_FORWARD;
     }
@@ -179,38 +126,43 @@ void AnimatedSprite::SetTime(float time)
     AdvanceTime(time);
 }
 
-/********************************************************************************************************************/
-/*																													*/
-/********************************************************************************************************************/
-
 //! This function advances the animation by the specified amount of time
 //!
 //! @param	elapsed		elapsed time (must be finite and >= 0)
 //!
 //! @note	A looping or ping-pong animation whose frames have no duration
-//! stays on its current frame.
+//! stays on its current frame, and so does an animation with no frames.
 //! @note	This function does nothing if the sprite has no animation group
-//! (it was default-constructed).
+//! (it was default-constructed) or the group has no animations.
 
 void AnimatedSprite::AdvanceTime(float elapsed)
 {
     assert(pAnimations_ != 0);
-    if (pAnimations_ == 0)
+
+    Animation const *pAnimation = CurrentAnimation();
+    if (pAnimation == 0)
     {
         return;
     }
 
     assert(elapsed >= 0.0f && std::isfinite(elapsed));
-    assert(currentAnimation_ >= 0 && currentAnimation_ < int(pAnimations_->animations.size()));
 
-    Animation const &animation = pAnimations_->animations[currentAnimation_]; // Convenience
-    Animation::FrameList const &frames = animation.frames;                    // Convenience
+    Animation const &animation = *pAnimation;              // Convenience
+    Animation::FrameList const &frames = animation.frames; // Convenience
 
     // Nothing to do if no time has passed. This also rejects a NaN or infinite
     // time, which would never be used up by the loop below.
 
     if (!(elapsed > 0.0f) || !std::isfinite(elapsed))
     {
+        return;
+    }
+
+    // With no frames, there is nothing to step through
+
+    if (frames.empty())
+    {
+        time_ += elapsed;
         return;
     }
 
@@ -303,24 +255,12 @@ void AnimatedSprite::AdvanceTime(float elapsed)
 
     frameTime_ = e;
 
-    // Set the image location and size according to the current frame
-
-    Frame const &frame = frames[currentFrame_];                     // Convenience
-    AnimationGroup::ImageList const &images = pAnimations_->images; // Convenience
-    AnimationGroup::Image const &image = images[frame.index];       // Convenience
-
-    rect_ = image.rect;
-    offsetX_ = image.offsetX;
-    offsetY_ = image.offsetY;
+    UpdateImage();
 
     // Save the time
 
     time_ += elapsed;
 }
-
-/********************************************************************************************************************/
-/*																													*/
-/********************************************************************************************************************/
 
 //! This function sets the current animation to a specific frame (as opposed to
 //! a specific time). The running time of the animation is then set to
@@ -331,20 +271,27 @@ void AnimatedSprite::AdvanceTime(float elapsed)
 //! @note If the mode is ping-pong, then the initial direction is assumed to be
 //! forward.
 //! @note	This function does nothing if the sprite has no animation group
-//! (it was default-constructed).
+//! (it was default-constructed), the group has no animations, or the
+//! animation has no such frame.
 
 void AnimatedSprite::SetFrame(int index)
 {
     assert(pAnimations_ != 0);
-    if (pAnimations_ == 0)
+
+    Animation const *pAnimation = CurrentAnimation();
+    if (pAnimation == 0)
     {
         return;
     }
 
-    Animation const &animation = pAnimations_->animations[currentAnimation_]; // Convenience
-    Animation::FrameList const &frames = animation.frames;                    // Convenience
+    Animation const &animation = *pAnimation;              // Convenience
+    Animation::FrameList const &frames = animation.frames; // Convenience
 
     assert(index >= 0 && index < int(frames.size()));
+    if (index < 0 || index >= int(frames.size()))
+    {
+        return;
+    }
 
     time_ = 0.0f;
 
@@ -373,20 +320,8 @@ void AnimatedSprite::SetFrame(int index)
     currentFrame_ = index;
     frameTime_ = 0.0f;
 
-    // Set the image location and size according to the current frame
-
-    Frame const &frame = frames[currentFrame_];                     // Convenience
-    AnimationGroup::ImageList const &images = pAnimations_->images; // Convenience
-    AnimationGroup::Image const &image = images[frame.index];       // Convenience
-
-    rect_ = image.rect;
-    offsetX_ = image.offsetX;
-    offsetY_ = image.offsetY;
+    UpdateImage();
 }
-
-/********************************************************************************************************************/
-/*																													*/
-/********************************************************************************************************************/
 
 //! This function will update the animation based on the amount of time that has
 //! elapsed since it was last called.
@@ -401,9 +336,61 @@ void AnimatedSprite::Service(float elapsedTime)
     AdvanceTime(elapsedTime);
 }
 
-/********************************************************************************************************************/
-/*																													*/
-/********************************************************************************************************************/
+//! Unlike a Sprite, an animated sprite with an empty image rectangle draws
+//! nothing. That is the case when it has no animation group, or its current
+//! animation has no frames.
+//!
+//! @param	dst		destination surface
+
+void AnimatedSprite::Draw(SDL_Surface *dst) const
+{
+    if (rect_.w <= 0 || rect_.h <= 0)
+    {
+        return;
+    }
+
+    Sprite::Draw(dst);
+}
+
+AnimatedSprite::Animation const *AnimatedSprite::CurrentAnimation() const
+{
+    if (pAnimations_ == 0 || currentAnimation_ < 0 || currentAnimation_ >= int(pAnimations_->animations.size()))
+    {
+        return 0;
+    }
+
+    return &pAnimations_->animations[currentAnimation_];
+}
+
+void AnimatedSprite::UpdateImage()
+{
+    // If there is no current frame, then there is no image
+
+    rect_ = SDL_Rect{0, 0, 0, 0};
+    offsetX_ = 0;
+    offsetY_ = 0;
+
+    Animation const *pAnimation = CurrentAnimation();
+    if (pAnimation == 0 || currentFrame_ < 0 || currentFrame_ >= int(pAnimation->frames.size()))
+    {
+        return;
+    }
+
+    int const imageIndex = pAnimation->frames[currentFrame_].index;
+    AnimationGroup::ImageList const &images = pAnimations_->images; // Convenience
+
+    assert(imageIndex >= 0 && imageIndex < int(images.size()));
+    if (imageIndex < 0 || imageIndex >= int(images.size()))
+    {
+        return;
+    }
+
+    AnimationGroup::Image const &image = images[imageIndex]; // Convenience
+
+    rect_ = image.rect;
+    offsetX_ = image.offsetX;
+    offsetY_ = image.offsetY;
+}
 
 //! @param	images			List of images used in the animations
 //! @param	animations		List of animations
@@ -412,10 +399,6 @@ AnimatedSprite::AnimationGroup::AnimationGroup(ImageList const &images, Animatio
     : images(images), animations(animations)
 {
 }
-
-/********************************************************************************************************************/
-/*																													*/
-/********************************************************************************************************************/
 
 //! This function creates a sprite described by the specified file. Ownership of
 //! the sprite is passed to the caller. The sprite must be deallocated using
@@ -430,10 +413,6 @@ Sprite *SpriteFactory::LoadSprite(char const * /*filename*/)
 {
     return 0;
 }
-
-/********************************************************************************************************************/
-/*																													*/
-/********************************************************************************************************************/
 
 //! This function creates an animated sprite described by the specified file.
 //! Ownership of the sprite is passed to the caller. The sprite must be

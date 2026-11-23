@@ -392,6 +392,42 @@ TEST_F(SpriteDrawTest, NegativePositionIsRoundedToNearestPixel)
     EXPECT_EQ(At(other.get(), 0, 6), BLACK);
 }
 
+TEST_F(SpriteDrawTest, NewAnimatedSpriteDrawsItsFirstFrameNotTheWholeSheet)
+{
+    Sdlx::AnimatedSprite::AnimationGroup group;
+    group.images.push_back({SDL_Rect{0, 0, 4, 8}, 0, 0}); // red
+    group.images.push_back({SDL_Rect{4, 0, 4, 8}, 0, 0}); // green
+    Sdlx::AnimatedSprite::Animation animation;
+    animation.frames = {{0, 1.0f}, {1, 1.0f}};
+    group.animations.push_back(animation);
+
+    // Drawn without calling PlayAnimation
+    Sdlx::AnimatedSprite sprite(sheet->get(), &group, 4.0f, 4.0f);
+    sprite.Draw(dst->get());
+
+    EXPECT_EQ(At(dst->get(), 4, 4), RED);
+    EXPECT_EQ(At(dst->get(), 7, 4), RED);
+    EXPECT_EQ(At(dst->get(), 8, 4), BLACK); // the green half of the sheet is not drawn
+}
+
+TEST_F(SpriteDrawTest, AnimatedSpriteWithoutAnImageDrawsNothing)
+{
+    // A plain Sprite with an empty rectangle draws the whole sheet. An animated
+    // sprite with no current image must not.
+    Sdlx::AnimatedSprite::AnimationGroup empty;
+    Sdlx::AnimatedSprite sprite(sheet->get(), &empty, 4.0f, 4.0f);
+    sprite.Draw(dst->get());
+
+    EXPECT_EQ(At(dst->get(), 4, 4), BLACK);
+    EXPECT_EQ(At(dst->get(), 8, 4), BLACK);
+
+    // The same through a pointer to the base class
+    Sdlx::Sprite const &base = sprite;
+    base.Draw(dst->get());
+
+    EXPECT_EQ(At(dst->get(), 4, 4), BLACK);
+}
+
 TEST_F(SpriteDrawTest, AnimatedSpriteDrawsCurrentFrame)
 {
     Sdlx::AnimatedSprite::AnimationGroup group;
@@ -504,8 +540,19 @@ TEST_F(EventLoopTest, DefaultHandlerReturnsOnQuit)
 {
     PushEvent(SDL_EVENT_QUIT);
 
-    Sdlx::EventLoop(); // would hang if the quit event were not recognized
-    SUCCEED();
+    // This would hang if the quit event were not recognized
+    EXPECT_TRUE(Sdlx::EventLoop());
+}
+
+// This test is not in the EventLoopTest suite, because it needs the SDL events
+// subsystem to be shut down.
+TEST(EventLoopWithoutEventsTest, ReturnsFalseWhenWaitingFails)
+{
+    ASSERT_EQ(SDL_WasInit(SDL_INIT_EVENTS), 0u);
+
+    // Waiting for an event fails when the events subsystem is not initialized.
+    // The loop must report that instead of waiting forever.
+    EXPECT_FALSE(Sdlx::EventLoop());
 }
 
 TEST_F(EventLoopTest, HandlerSeesEveryEventUntilQuit)

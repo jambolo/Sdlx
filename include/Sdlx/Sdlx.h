@@ -2,16 +2,14 @@
 
 #include <SDL3/SDL.h>
 
-//! SDL3 extension library: image loading, an event loop, and sprites.
+//! SDL3 extension library.
 namespace Sdlx
 {
 
-//! Loads an image file (using SDL3_image). Free the result with
-//! SDL_DestroySurface.
+//! Loads an image file (using SDL3_image). Free the result with SDL_DestroySurface.
 SDL_Surface *LoadSurface(char const *filename);
 
-//! Loads an image file and applies a color key. A paletted image is converted
-//! to 32-bit RGBA.
+//! Loads an image file and applies a color key. A paletted image is converted to 32-bit RGBA.
 SDL_Surface *LoadColorKeyedSurface(char const *filename, SDL_Color key);
 
 //! Idle processing callback.
@@ -20,8 +18,8 @@ typedef bool (*EventLoopIdleCallback)();
 //! Event loop event handler
 typedef bool (*EventLoopEventHandler)(SDL_Event const &event);
 
-//! Handle events until a SDL_EVENT_QUIT event is received.
-void EventLoop(EventLoopEventHandler pEH = 0, EventLoopIdleCallback pCB = 0);
+//! Handle events until a SDL_EVENT_QUIT event is received. Returns false if waiting for an event failed.
+bool EventLoop(EventLoopEventHandler pEH = 0, EventLoopIdleCallback pIdle = 0);
 
 //! Returns an opaque color with the specified values
 [[deprecated("Use SDL_Color{ r, g, b, 255 } instead")]]

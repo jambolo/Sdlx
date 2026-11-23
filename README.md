@@ -23,9 +23,12 @@ The RAII wrappers are not written yet. For now, loaded surfaces are plain `SDL_S
 
 ## Requirements
 
-- CMake 3.23 or later
+- CMake 3.24 or later
 - A C++17 compiler
 - Git, to let CMake fetch SDL3 and SDL3_image when they are not installed
+- On Linux, the X11 or Wayland development packages, which SDL3 needs when it is built from source (see
+  [SDL's build dependencies](https://wiki.libsdl.org/SDL3/README-linux#build-dependencies)). For a build that needs
+  no windows, pass `-DSDL_UNIX_CONSOLE_BUILD=ON -DSDL_X11=OFF -DSDL_WAYLAND=OFF` to CMake instead.
 
 ## Using Sdlx in your project
 
@@ -53,6 +56,10 @@ target_link_libraries(myapp PRIVATE Sdlx::Sdlx)
 add_subdirectory(external/Sdlx)
 target_link_libraries(myapp PRIVATE Sdlx::Sdlx)
 ```
+
+With either method, if your project already defines the targets `SDL3::SDL3` or `SDL3_image::SDL3_image` before it
+adds Sdlx, Sdlx uses them and does not fetch its own. Sdlx adds no install rules to your project unless you set
+`Sdlx_INSTALL` to `ON`.
 
 ### As an installed package
 

@@ -15,10 +15,6 @@ bool DefaultEventLoopEventHandler(SDL_Event const &event)
 namespace Sdlx
 {
 
-/********************************************************************************************************************/
-/*																													*/
-/********************************************************************************************************************/
-
 //! This function loads an image file. All image formats supported by SDL3_image
 //! can be loaded. Currently, they are:
 //!		- BMP
@@ -33,17 +29,12 @@ namespace Sdlx
 //!
 //! @param	filename	name of the file to load
 //!
-//! @return		pointer to the loaded surface (free with
-//! SDL_DestroySurface), or 0 if error
+//! @return		pointer to the loaded surface (free with SDL_DestroySurface), or 0 if error
 
 SDL_Surface *LoadSurface(char const *filename)
 {
     return IMG_Load(filename);
 }
-
-/********************************************************************************************************************/
-/*																													*/
-/********************************************************************************************************************/
 
 //! This function loads an image file. In addition, a color key is specified.
 //!
@@ -63,8 +54,7 @@ SDL_Surface *LoadSurface(char const *filename)
 //! @param	filename	name of the file to load
 //! @param	key			color that is treated as transparent
 //!
-//! @return		pointer to the loaded surface (free with
-//! SDL_DestroySurface), or 0 if error
+//! @return		pointer to the loaded surface (free with SDL_DestroySurface), or 0 if error
 
 SDL_Surface *LoadColorKeyedSurface(char const *filename, SDL_Color key)
 {
@@ -102,21 +92,20 @@ SDL_Surface *LoadColorKeyedSurface(char const *filename, SDL_Color key)
     return image;
 }
 
-/********************************************************************************************************************/
-/*																													*/
-/********************************************************************************************************************/
-
-//! This function handles SDL events until a SDL_EVENT_QUIT event is received.
+//! This function handles SDL events until the event handler returns @c false.
+//! The default handler does that when a SDL_EVENT_QUIT event is received.
 //! If an idle processing callback is specified, it is called whenever there are
 //! no events to process. If the callback returns @c false, then it will not be
 //! called again until after the next event occurs.
 //!
 //!	@param	pEH			Event Handler callback
 //!	@param	pIdle		Idle processing callback
+//!
+//! @return		@c true if the event handler ended the loop, or @c false if waiting for an event failed (call
+//!             SDL_GetError() for the reason). Waiting fails when the SDL events subsystem is not initialized.
 
-void EventLoop(EventLoopEventHandler pEH /* = 0*/, EventLoopIdleCallback pIdle /* = 0*/)
+bool EventLoop(EventLoopEventHandler pEH /* = 0*/, EventLoopIdleCallback pIdle /* = 0*/)
 {
-    bool done = false;
     bool skipIdle = false;
 
     if (pEH == 0)
@@ -124,7 +113,7 @@ void EventLoop(EventLoopEventHandler pEH /* = 0*/, EventLoopIdleCallback pIdle /
         pEH = DefaultEventLoopEventHandler;
     }
 
-    while (!done)
+    for (;;)
     {
         SDL_Event event;
         bool haveEvent;
@@ -135,12 +124,15 @@ void EventLoop(EventLoopEventHandler pEH /* = 0*/, EventLoopIdleCallback pIdle /
 
         if (skipIdle || pIdle == 0)
         {
-            haveEvent = SDL_WaitEvent(&event);
+            // Waiting with no time limit returns without an event only if it failed.
+            // It would fail again, so give up instead of trying forever.
 
-            if (!haveEvent)
+            if (!SDL_WaitEvent(&event))
             {
-                SDL_Delay(1); // Don't spin if waiting failed
+                return false;
             }
+
+            haveEvent = true;
         }
         else
         {
@@ -150,14 +142,14 @@ void EventLoop(EventLoopEventHandler pEH /* = 0*/, EventLoopIdleCallback pIdle /
         if (haveEvent)
         {
             // Call the event handler. If it returns false, then we should exit.
-            done = !(*pEH)(event);
+
+            if (!(*pEH)(event))
+            {
+                return true;
+            }
 
             skipIdle = false; // Now that we have processed a message, start calling
                               // the callback function again.
-        }
-        else if (skipIdle || pIdle == 0)
-        {
-            // Nothing to do
         }
         else
         {
@@ -170,10 +162,6 @@ void EventLoop(EventLoopEventHandler pEH /* = 0*/, EventLoopIdleCallback pIdle /
     }
 }
 
-/********************************************************************************************************************/
-/*																													*/
-/********************************************************************************************************************/
-
 //! This function is basically a convenience. SDL structs lack constructors, so
 //! this acts as a constructor for
 //! @c SDL_Color. The alpha component is set to opaque.
@@ -182,8 +170,7 @@ void EventLoop(EventLoopEventHandler pEH /* = 0*/, EventLoopIdleCallback pIdle /
 //! @param	green	green component. The valid range is 0 - 255.
 //! @param	blue	blue component. The valid range is 0 - 255.
 //!
-//! @deprecated	Use brace initialization instead: <tt>SDL_Color{ r, g, b, 255
-//! }</tt>.
+//! @deprecated	Use brace initialization instead: <tt>SDL_Color{ r, g, b, 255 }</tt>.
 
 SDL_Color MakeColor(int red, int green, int blue)
 {
@@ -191,10 +178,6 @@ SDL_Color MakeColor(int red, int green, int blue)
 
     return color;
 }
-
-/********************************************************************************************************************/
-/*																													*/
-/********************************************************************************************************************/
 
 //! This function is basically a convenience. SDL structs lack constructors, so
 //! this acts as a constructor for
@@ -205,8 +188,7 @@ SDL_Color MakeColor(int red, int green, int blue)
 //! @param	w	width
 //! @param	h	height
 //!
-//! @deprecated	Use brace initialization instead: <tt>SDL_Rect{ x, y, w, h
-//! }</tt>.
+//! @deprecated	Use brace initialization instead: <tt>SDL_Rect{ x, y, w, h }</tt>.
 
 SDL_Rect MakeRect(int x, int y, int w, int h)
 {

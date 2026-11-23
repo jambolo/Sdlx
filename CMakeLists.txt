@@ -1,15 +1,12 @@
 # Sdlx Library
 
-cmake_minimum_required(VERSION 3.23)
+# 3.24 is needed for FIND_PACKAGE_ARGS in FetchContent_Declare
+cmake_minimum_required(VERSION 3.24)
 project(Sdlx
     VERSION 0.1.0
     DESCRIPTION "SDL extension library"
     LANGUAGES CXX
 )
-
-# Modern CMake policy settings
-cmake_policy(SET CMP0077 NEW)  # option() honors normal variables
-cmake_policy(SET CMP0135 NEW)  # DOWNLOAD_EXTRACT_TIMESTAMP option
 
 # Feature requirements
 include(CMakeDependentOption)
@@ -22,21 +19,16 @@ include(CMakePackageConfigHelpers)
 
 option(BUILD_SHARED_LIBS "Build libraries as DLLs" OFF)
 
-# Set default build type if not specified
-if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build." FORCE)
-    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
-endif()
-
-# Set debug postfix if not set
-if(NOT CMAKE_DEBUG_POSTFIX)
-    set(CMAKE_DEBUG_POSTFIX d)
-endif()
-
 # Only enable certain features when this is the main project
 set(IS_TOP_LEVEL_PROJECT OFF)
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
     set(IS_TOP_LEVEL_PROJECT ON)
+endif()
+
+# Set default build type if not specified. A project that uses Sdlx chooses its own build type.
+if(IS_TOP_LEVEL_PROJECT AND NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build." FORCE)
+    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
 
 cmake_dependent_option(${PROJECT_NAME}_BUILD_TESTS
@@ -45,6 +37,10 @@ cmake_dependent_option(${PROJECT_NAME}_BUILD_TESTS
     "IS_TOP_LEVEL_PROJECT"
     OFF
 )
+
+# Install and export rules are generated only when asked for. They require SDL3 and SDL3_image to be installable
+# too, which a project that uses Sdlx may not want.
+option(${PROJECT_NAME}_INSTALL "Generate the install and export rules for ${PROJECT_NAME}" ${IS_TOP_LEVEL_PROJECT})
 
 if(IS_TOP_LEVEL_PROJECT)
     set(${PROJECT_NAME}_DOXYGEN_OUTPUT_DIRECTORY "" CACHE PATH "Doxygen output directory (empty to disable)")
@@ -67,32 +63,44 @@ if (${PROJECT_NAME}_BUILD_TESTS)
 endif()
 
 include(FetchContent)
-FetchContent_Declare(
-    SDL3
-    GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
-    GIT_TAG        release-3.4.20
-    GIT_SHALLOW    TRUE
-    FIND_PACKAGE_ARGS 3 CONFIG
-)
-# Put a fetched SDL3 in an export set so Sdlx can be exported and installed
-set(SDL_INSTALL ON CACHE BOOL "Enable SDL3 installation" FORCE)
-FetchContent_MakeAvailable(SDL3)
 
-FetchContent_Declare(
-    SDL3_image
-    GIT_REPOSITORY https://github.com/libsdl-org/SDL_image.git
-    GIT_TAG        release-3.4.8
-    GIT_SHALLOW    TRUE
-    GIT_SUBMODULES ""   # Skip the vendored codec libraries; use the built-in decoders
-    FIND_PACKAGE_ARGS 3 CONFIG
-)
-set(SDLIMAGE_INSTALL ON CACHE BOOL "Enable SDL3_image installation" FORCE)
-set(SDLIMAGE_VENDORED OFF CACHE BOOL "Use vendored third-party libraries" FORCE)
-set(SDLIMAGE_AVIF OFF CACHE BOOL "Support AVIF images" FORCE)
-set(SDLIMAGE_JXL OFF CACHE BOOL "Support JPEG-XL images" FORCE)
-set(SDLIMAGE_TIF OFF CACHE BOOL "Support TIFF images" FORCE)
-set(SDLIMAGE_WEBP OFF CACHE BOOL "Support WebP images" FORCE)
-FetchContent_MakeAvailable(SDL3_image)
+# A parent project may already provide SDL3 or SDL3_image (with add_subdirectory, for example). Use its targets
+# instead of adding the library a second time.
+
+if(NOT TARGET SDL3::SDL3)
+    FetchContent_Declare(
+        SDL3
+        GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
+        GIT_TAG        release-3.4.20
+        GIT_SHALLOW    TRUE
+        FIND_PACKAGE_ARGS 3 CONFIG
+    )
+    if(${PROJECT_NAME}_INSTALL)
+        # Put a fetched SDL3 in an export set so Sdlx can be exported and installed
+        set(SDL_INSTALL ON CACHE BOOL "Enable SDL3 installation" FORCE)
+    endif()
+    FetchContent_MakeAvailable(SDL3)
+endif()
+
+if(NOT TARGET SDL3_image::SDL3_image)
+    FetchContent_Declare(
+        SDL3_image
+        GIT_REPOSITORY https://github.com/libsdl-org/SDL_image.git
+        GIT_TAG        release-3.4.8
+        GIT_SHALLOW    TRUE
+        GIT_SUBMODULES ""   # Skip the vendored codec libraries; use the built-in decoders
+        FIND_PACKAGE_ARGS 3 CONFIG
+    )
+    if(${PROJECT_NAME}_INSTALL)
+        set(SDLIMAGE_INSTALL ON CACHE BOOL "Enable SDL3_image installation" FORCE)
+    endif()
+    set(SDLIMAGE_VENDORED OFF CACHE BOOL "Use vendored third-party libraries" FORCE)
+    set(SDLIMAGE_AVIF OFF CACHE BOOL "Support AVIF images" FORCE)
+    set(SDLIMAGE_JXL OFF CACHE BOOL "Support JPEG-XL images" FORCE)
+    set(SDLIMAGE_TIF OFF CACHE BOOL "Support TIFF images" FORCE)
+    set(SDLIMAGE_WEBP OFF CACHE BOOL "Support WebP images" FORCE)
+    FetchContent_MakeAvailable(SDL3_image)
+endif()
 
 # include(FetchContent)
 # FetchContent_Declare(
@@ -186,6 +194,12 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     WINDOWS_EXPORT_ALL_SYMBOLS ON
 )
 
+# Debug builds of the library have the postfix "d", unless CMAKE_DEBUG_POSTFIX says otherwise. This is set on the
+# target, not through CMAKE_DEBUG_POSTFIX, so that it does not affect the other targets in the build.
+if(NOT DEFINED CMAKE_DEBUG_POSTFIX)
+    set_target_properties(${PROJECT_NAME} PROPERTIES DEBUG_POSTFIX d)
+endif()
+
 #configure_file("${PROJECT_SOURCE_DIR}/Version.h.in" "${PROJECT_BINARY_DIR}/Version.h")
 
 #########################################################################
@@ -243,69 +257,75 @@ endif()
 # Installation                                                          #
 #########################################################################
 
-# Configure installation paths
-set(INSTALL_CONFIGDIR ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME})
+if(${PROJECT_NAME}_INSTALL)
 
-# Install the library and headers
-install(TARGETS ${PROJECT_NAME}
-    EXPORT ${PROJECT_NAME}-targets
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-    FILE_SET HEADERS DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-)
+    # Configure installation paths
+    set(INSTALL_CONFIGDIR ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME})
 
-# Install the targets file
-install(EXPORT ${PROJECT_NAME}-targets
-    FILE ${PROJECT_NAME}Targets.cmake
-    NAMESPACE ${PROJECT_NAME}::
-    DESTINATION ${INSTALL_CONFIGDIR}
-)
-
-# Create and install package configuration files
-write_basic_package_version_file(
-    ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake
-    VERSION ${PROJECT_VERSION}
-    COMPATIBILITY SameMajorVersion
-)
-
-# Check if config template exists
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/cmake/${PROJECT_NAME}Config.cmake.in)
-    configure_package_config_file(
-        ${CMAKE_CURRENT_SOURCE_DIR}/cmake/${PROJECT_NAME}Config.cmake.in
-        ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake
-        INSTALL_DESTINATION ${INSTALL_CONFIGDIR}
+    # Install the library and headers
+    install(TARGETS ${PROJECT_NAME}
+        EXPORT ${PROJECT_NAME}-targets
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+        FILE_SET HEADERS DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
     )
-else()
-    # Create a basic config file if template doesn't exist
-    file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake "
+
+    # Install the targets file
+    install(EXPORT ${PROJECT_NAME}-targets
+        FILE ${PROJECT_NAME}Targets.cmake
+        NAMESPACE ${PROJECT_NAME}::
+        DESTINATION ${INSTALL_CONFIGDIR}
+    )
+
+    # Create and install package configuration files
+    write_basic_package_version_file(
+        ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake
+        VERSION ${PROJECT_VERSION}
+        COMPATIBILITY SameMajorVersion
+    )
+
+    # Check if config template exists
+    if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/cmake/${PROJECT_NAME}Config.cmake.in)
+        configure_package_config_file(
+            ${CMAKE_CURRENT_SOURCE_DIR}/cmake/${PROJECT_NAME}Config.cmake.in
+            ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake
+            INSTALL_DESTINATION ${INSTALL_CONFIGDIR}
+        )
+    else()
+        # Create a basic config file if template doesn't exist
+        file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake "
 include(CMakeFindDependencyMacro)
 include(\${CMAKE_CURRENT_LIST_DIR}/${PROJECT_NAME}Targets.cmake)
 ")
-endif()
+    endif()
 
-# Install configuration files
-install(FILES
-    ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake
-    ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake
-    DESTINATION ${INSTALL_CONFIGDIR}
-)
+    # Install configuration files
+    install(FILES
+        ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake
+        ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake
+        DESTINATION ${INSTALL_CONFIGDIR}
+    )
 
-# Export from build tree for development
-export(EXPORT ${PROJECT_NAME}-targets
-    FILE ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Targets.cmake
-    NAMESPACE ${PROJECT_NAME}::
-)
+    # Export from build tree for development
+    export(EXPORT ${PROJECT_NAME}-targets
+        FILE ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Targets.cmake
+        NAMESPACE ${PROJECT_NAME}::
+    )
 
-# Register package in user's package registry (only if top-level)
-if(IS_TOP_LEVEL_PROJECT)
-    export(PACKAGE ${PROJECT_NAME})
-endif()
+    # Register package in user's package registry (only if top-level)
+    if(IS_TOP_LEVEL_PROJECT)
+        export(PACKAGE ${PROJECT_NAME})
+    endif()
 
-# Install documentation if built. A relative output directory is relative to the source directory, which is where
-# Doxygen runs.
-if(${PROJECT_NAME}_DOXYGEN_OUTPUT_DIRECTORY AND DOXYGEN_FOUND)
-    install(DIRECTORY ${${PROJECT_NAME}_DOXYGEN_OUTPUT_DIRECTORY}/html
-            DESTINATION ${CMAKE_INSTALL_DOCDIR}
-            OPTIONAL)
+    # Install documentation if built. A relative output directory is relative to the source directory, which is where
+    # Doxygen runs.
+    if(${PROJECT_NAME}_DOXYGEN_OUTPUT_DIRECTORY AND DOXYGEN_FOUND)
+        install(DIRECTORY ${${PROJECT_NAME}_DOXYGEN_OUTPUT_DIRECTORY}/html
+                DESTINATION ${CMAKE_INSTALL_DOCDIR}
+                OPTIONAL)
+    endif()
+
+elseif(IS_TOP_LEVEL_PROJECT)
+    message(STATUS "${PROJECT_NAME}: Install rules are disabled. Set ${PROJECT_NAME}_INSTALL to ON to enable.")
 endif()

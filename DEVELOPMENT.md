@@ -14,7 +14,9 @@ Current pieces:
     applies the key, because on a paletted surface a color maps to the nearest palette entry, which may not be the
     key color. The functions are not named `LoadImage`, because `<windows.h>` defines a macro with that name.
   - `EventLoop` runs until `SDL_EVENT_QUIT`. With no idle callback it blocks in `SDL_WaitEvent`. If an idle callback
-    returns `false` it is not called again until after the next event.
+    returns `false` it is not called again until after the next event. It returns `true` when the event handler ends
+    the loop, and `false` if waiting for an event fails, which happens when the SDL events subsystem is not
+    initialized.
   - `MakeColor` and `MakeRect` are deprecated. Use brace initialization (`SDL_Color{r, g, b, 255}`).
 - **Sprites** (`Sprite.h`, `Sprite.cpp`)
   - `Sprite` is a rectangle on a sheet `SDL_Surface`, with an origin offset and a float position. `Draw` blits it
@@ -24,21 +26,32 @@ Current pieces:
     (`MODE_ONCE`, `MODE_LOOP` or `MODE_PINGPONG`). `AdvanceTime` is the core: it tracks the current frame and the
     time spent in it, and updates the sprite's rectangle and offset. For the two repeating modes it first drops the
     whole repetitions from the elapsed time, so a very large time cannot stall it, and an animation whose frames
-    have no duration stays on its current frame. A default-constructed `AnimatedSprite` has no animation group;
-    its animation functions assert in debug builds and otherwise do nothing.
+    have no duration stays on its current frame. A new sprite starts on the first frame of the first animation.
+  - An `AnimatedSprite` can be without a current image: when it was default-constructed (no animation group), when
+    the group has no animations, or when the current animation has no frames. Its rectangle is then empty and
+    `Draw` draws nothing, unlike a plain `Sprite`, for which an empty rectangle means the whole sheet. That is why
+    `Draw` is virtual. The animation functions do nothing in these cases, and they assert in debug builds when
+    there is no animation group.
   - `SpriteFactory` is a stub. Its load functions return 0.
 
 ### Dependencies
 
-SDL3 and SDL3_image are linked through CMake targets and fetched with `FetchContent` only when they are not
-already installed (`FIND_PACKAGE_ARGS`). `SDL3::SDL3` is a public dependency, because the public headers include
-`<SDL3/SDL.h>`. `SDL3_image::SDL3_image` is private. Notes on the fetch:
+SDL3 and SDL3_image are linked through CMake targets. If the targets `SDL3::SDL3` or `SDL3_image::SDL3_image`
+already exist, because a parent project added the library itself, Sdlx uses them. Otherwise they are fetched with
+`FetchContent`, but only when they are not already installed (`FIND_PACKAGE_ARGS`). `SDL3::SDL3` is a public
+dependency, because the public headers include `<SDL3/SDL.h>`. `SDL3_image::SDL3_image` is private. Notes on the
+fetch:
 
 - SDL3_image is fetched without its git submodules, with `SDLIMAGE_VENDORED` off and the AVIF, JXL, TIFF and WebP
   formats disabled. Cloning the submodules fails on Windows when the build path is long. PNG, JPEG and the other
   built-in formats still work.
-- `SDL_INSTALL` and `SDLIMAGE_INSTALL` are forced on, so a fetched SDL can be part of Sdlx's export set.
-  Installing Sdlx therefore also installs a fetched SDL3 and SDL3_image.
+- The option `Sdlx_INSTALL` controls whether Sdlx generates install and export rules. It is on by default only when
+  Sdlx is the top-level project. When it is on, `SDL_INSTALL` and `SDLIMAGE_INSTALL` are forced on, so a fetched
+  SDL can be part of Sdlx's export set, and installing Sdlx also installs a fetched SDL3 and SDL3_image. If a
+  parent project provides the SDL targets and turns `Sdlx_INSTALL` on, its SDL must have install rules too.
+- On Linux, SDL3's own configure step fails unless the X11 or Wayland development packages are installed. For a
+  build that needs no windows, such as the tests, pass
+  `-DSDL_UNIX_CONSOLE_BUILD=ON -DSDL_X11=OFF -DSDL_WAYLAND=OFF`. CI does this.
 
 ## File structure
 
@@ -49,6 +62,7 @@ test/                GoogleTest tests; each .cpp becomes its own executable
 cmake/               Package config template (SdlxConfig.cmake.in)
 Doxyfile.in          Doxygen configuration, filled in by CMake
 .clang-format        Formatting style (Microsoft)
+.clang-tidy          Lint checks
 .github/workflows/   CI and CD
 ```
 
@@ -62,8 +76,9 @@ cmake -S . -B build
 cmake --build build --config Release
 ```
 
-The first configure downloads SDL3 and SDL3_image if they aren't installed. On Windows, keep the build directory
-path short, since a long path can break the SDL3_image clone.
+CMake 3.24 or later is required. The first configure downloads SDL3 and SDL3_image if they aren't installed. On
+Windows, keep the build directory path short, since a long path can break the SDL3_image clone. On Linux, see the
+note about X11 and Wayland under [Dependencies](#dependencies).
 
 The library is static unless you pass `-DBUILD_SHARED_LIBS=ON`. The API has no export annotations, so on Windows the
 DLL exports every symbol (`WINDOWS_EXPORT_ALL_SYMBOLS`). Debug builds use the postfix `d`.
@@ -106,8 +121,8 @@ cmake -S . -B build -DSdlx_DOXYGEN_OUTPUT_DIRECTORY=docs
 cmake --build build --target docs
 ```
 
-The HTML is written to `docs/html`. Doxygen reads `README.md` (as the main page), `src/` and `include/Sdlx/`. Keep
-the build free of Doxygen warnings.
+The HTML is written to `docs/html`. Doxygen reads `README.md` (as the main page), `DEVELOPMENT.md`, `src/` and
+`include/Sdlx/`. Keep the build free of Doxygen warnings.
 
 When CI builds the documentation on `master`, it is deployed to <https://jambolo.github.io/Sdlx>. This requires
 GitHub Pages to be enabled for the repository, with the source set to GitHub Actions.
@@ -125,7 +140,9 @@ Branches are `master`, `develop` and `release/**`.
 
 Formatting uses `clang-format` with the Microsoft style (4-space indent, no tabs, 120 columns, braces on their own
 line), which is set in `.clang-format` at the repository root. Run `clang-format -i` on the files you change before
-opening a pull request. Coverage upload needs a `CODECOV_TOKEN` repository secret.
+opening a pull request. The lint checks are set in `.clang-tidy`: the compiler's diagnostics and the Clang static
+analyzer, with every finding treated as an error. The test steps fail if no tests are found. Coverage upload needs
+a `CODECOV_TOKEN` repository secret.
 
 ### Releases
 

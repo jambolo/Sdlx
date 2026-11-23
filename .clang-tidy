@@ -1,0 +1,7 @@
+---
+# The compiler's own diagnostics and the static analyzer. Any finding fails the lint job.
+Checks: 'clang-diagnostic-*,clang-analyzer-*'
+WarningsAsErrors: '*'
+# Report findings in Sdlx's own headers, but not in those of SDL or GoogleTest
+HeaderFilterRegex: '(include/Sdlx|src|test)/'
+...

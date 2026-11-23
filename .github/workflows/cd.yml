@@ -7,6 +7,11 @@ on:
     paths:
       - 'CMakeLists.txt'
 
+env:
+  # The tests are headless, so on Linux a fetched SDL3 is built without window support. Otherwise SDL's configure
+  # step fails unless the X11 or Wayland development packages (and their dependencies) are installed.
+  SDL_LINUX_ARGS: -DSDL_UNIX_CONSOLE_BUILD=ON -DSDL_X11=OFF -DSDL_WAYLAND=OFF
+
 jobs:
   build:
     name: Build & Test
@@ -14,11 +19,11 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Configure
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DSdlx_BUILD_TESTS=ON
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DSdlx_BUILD_TESTS=ON ${{ env.SDL_LINUX_ARGS }}
       - name: Build
         run: cmake --build build --config Release
       - name: Test
-        run: ctest --test-dir build --build-config Release --output-on-failure --no-tests=ignore
+        run: ctest --test-dir build --build-config Release --output-on-failure --no-tests=error
 
   release:
     name: Tag release

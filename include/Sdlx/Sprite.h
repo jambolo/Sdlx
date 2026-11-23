@@ -11,10 +11,6 @@ namespace Sdlx
 
 class SpriteAnimationGroup;
 
-/********************************************************************************************************************/
-/*																													*/
-/********************************************************************************************************************/
-
 //! A sprite
 //
 //! A sprite is a 2D rectangular image that has a location on the display. The
@@ -32,10 +28,10 @@ class Sprite
            float x = 0, float y = 0);
 
     // Destructor
-    virtual ~Sprite();
+    virtual ~Sprite() = default;
 
     //! Draws the sprite
-    void Draw(SDL_Surface *dst) const;
+    virtual void Draw(SDL_Surface *dst) const;
 
     float x_;       //!< Location of the sprite's origin on the display
     float y_;       //!< Location of the sprite's origin on the display
@@ -46,10 +42,6 @@ class Sprite
   private:
     SDL_Surface *sheet_; // The sheet containing the sprite's image
 };
-
-/********************************************************************************************************************/
-/*																													*/
-/********************************************************************************************************************/
 
 //! An animated sprite
 //
@@ -87,8 +79,8 @@ class AnimatedSprite : public Sprite
     //! A frame of an animation
     struct Frame
     {
-        int index;  //!< The index of the image in the image list
-        float time; //!< The duration of the frame
+        int index = 0;     //!< The index of the image in the image list
+        float time = 0.0f; //!< The duration of the frame
     };
 
     //! An animation
@@ -105,8 +97,8 @@ class AnimatedSprite : public Sprite
             MODE_PINGPONG //!< When the beginning or end is reached, reverse direction
         };
 
-        Mode mode;        //!< Looping behavior
-        FrameList frames; //!< The frames of the animation
+        Mode mode = MODE_ONCE; //!< Looping behavior
+        FrameList frames;      //!< The frames of the animation
     };
 
     //! A set of animations using a common sheet
@@ -115,11 +107,11 @@ class AnimatedSprite : public Sprite
         //! A frame of an animation
         struct Image
         {
-            SDL_Rect rect; //!< Location and size within the sheet
-            int offsetX;   //!< Offset to the sprite's origin from the UL corner of the
-                           //!< sprite (x)
-            int offsetY;   //!< Offset to the sprite's origin from the UL corner of the
-                           //!< sprite (y)
+            SDL_Rect rect = {0, 0, 0, 0}; //!< Location and size within the sheet
+            int offsetX = 0;              //!< Offset to the sprite's origin from the UL corner of the
+                                          //!< sprite (x)
+            int offsetY = 0;              //!< Offset to the sprite's origin from the UL corner of the
+                                          //!< sprite (y)
         };
 
         typedef std::vector<Image> ImageList;         //!< A vector of images
@@ -141,11 +133,11 @@ class AnimatedSprite : public Sprite
     //! functions do nothing.
     AnimatedSprite();
 
-    //! Constructor
+    //! Constructor. The sprite starts on the first frame of the first animation.
     AnimatedSprite(SDL_Surface *sheet, AnimationGroup const *animations, float x = 0, float y = 0);
 
     // Destructor
-    virtual ~AnimatedSprite();
+    virtual ~AnimatedSprite() = default;
 
     //! Starts an animation
     void PlayAnimation(int index, Direction direction = DIR_FORWARD);
@@ -157,7 +149,7 @@ class AnimatedSprite : public Sprite
     void SetTime(float time);
 
     //! Sets the current animation frame
-    void SetFrame(int intex);
+    void SetFrame(int index);
 
     //! Returns the current animation index
     int GetAnimation() const
@@ -180,7 +172,16 @@ class AnimatedSprite : public Sprite
     //! Updates the state of the sprite animation
     void Service(float elapsedTime);
 
+    //! Draws the current image of the animation
+    void Draw(SDL_Surface *dst) const override;
+
   private:
+    // Returns the current animation, or 0 if there is none
+    Animation const *CurrentAnimation() const;
+
+    // Sets the image location, size and offset according to the current frame
+    void UpdateImage();
+
     AnimationGroup const *pAnimations_; // The animation group
     int currentAnimation_;              // The index of the current animation
     int currentFrame_;                  // The index of the current frame
@@ -188,10 +189,6 @@ class AnimatedSprite : public Sprite
     float frameTime_;                   // The time from the start of the current frame
     Direction direction_;               // The direction that the animation is playing
 };
-
-/********************************************************************************************************************/
-/*																													*/
-/********************************************************************************************************************/
 
 //! Creates sprites from description files
 //

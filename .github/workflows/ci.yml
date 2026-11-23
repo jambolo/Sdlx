@@ -8,6 +8,11 @@ on:
       - 'release/**'
   pull_request:
 
+env:
+  # The tests are headless, so on Linux a fetched SDL3 is built without window support. Otherwise SDL's configure
+  # step fails unless the X11 or Wayland development packages (and their dependencies) are installed.
+  SDL_LINUX_ARGS: -DSDL_UNIX_CONSOLE_BUILD=ON -DSDL_X11=OFF -DSDL_WAYLAND=OFF
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -23,11 +28,11 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Configure
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DSdlx_BUILD_TESTS=ON
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DSdlx_BUILD_TESTS=ON ${{ runner.os == 'Linux' && env.SDL_LINUX_ARGS || '' }}
       - name: Build
         run: cmake --build build --config Release
       - name: Test
-        run: ctest --test-dir build --build-config Release --output-on-failure --no-tests=ignore
+        run: ctest --test-dir build --build-config Release --output-on-failure --no-tests=error
 
   lint-and-format:
     if: github.event_name == 'pull_request'
@@ -37,7 +42,7 @@ jobs:
       - name: Format check
         run: git ls-files '*.cpp' '*.h' | xargs -r clang-format --dry-run --Werror
       - name: Configure (compile database)
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DSdlx_BUILD_TESTS=ON
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DSdlx_BUILD_TESTS=ON ${{ env.SDL_LINUX_ARGS }}
       - name: Lint
         run: git ls-files '*.cpp' | xargs -r clang-tidy -p build
 
@@ -58,7 +63,7 @@ jobs:
       - name: Install Doxygen
         run: sudo apt-get update && sudo apt-get install -y doxygen graphviz
       - name: Configure
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DSdlx_DOXYGEN_OUTPUT_DIRECTORY=${{ github.workspace }}/build/docs
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DSdlx_DOXYGEN_OUTPUT_DIRECTORY=${{ github.workspace }}/build/docs ${{ env.SDL_LINUX_ARGS }}
       - name: Build documentation
         run: cmake --build build --target docs
       - name: Configure GitHub Pages
@@ -81,11 +86,11 @@ jobs:
       - name: Install gcovr
         run: pipx install gcovr
       - name: Configure
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DSdlx_BUILD_TESTS=ON -DCMAKE_CXX_FLAGS=--coverage
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DSdlx_BUILD_TESTS=ON -DCMAKE_CXX_FLAGS=--coverage ${{ env.SDL_LINUX_ARGS }}
       - name: Build
         run: cmake --build build
       - name: Test
-        run: ctest --test-dir build --output-on-failure --no-tests=ignore
+        run: ctest --test-dir build --output-on-failure --no-tests=error
       - name: Generate coverage report
         run: gcovr -r . --xml -o coverage.xml --exclude 'build/' --exclude 'test/'
       - name: Upload to Codecov

@@ -992,6 +992,7 @@ WARN_LOGFILE           =
 # Note: If this tag is empty the current directory is searched.
 
 INPUT                  = README.md \
+                         DEVELOPMENT.md \
                          src \
                          include/@PROJECT_NAME@
 

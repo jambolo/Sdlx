@@ -2,6 +2,7 @@
 
 #include <SDL3/SDL.h>
 
+//! SDL3 extension library: image loading, an event loop, and sprites.
 namespace Sdlx
 {
 

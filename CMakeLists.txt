@@ -78,6 +78,22 @@ FetchContent_Declare(
 set(SDL_INSTALL ON CACHE BOOL "Enable SDL3 installation" FORCE)
 FetchContent_MakeAvailable(SDL3)
 
+FetchContent_Declare(
+    SDL3_image
+    GIT_REPOSITORY https://github.com/libsdl-org/SDL_image.git
+    GIT_TAG        release-3.4.8
+    GIT_SHALLOW    TRUE
+    GIT_SUBMODULES ""   # Skip the vendored codec libraries; use the built-in decoders
+    FIND_PACKAGE_ARGS 3 CONFIG
+)
+set(SDLIMAGE_INSTALL ON CACHE BOOL "Enable SDL3_image installation" FORCE)
+set(SDLIMAGE_VENDORED OFF CACHE BOOL "Use vendored third-party libraries" FORCE)
+set(SDLIMAGE_AVIF OFF CACHE BOOL "Support AVIF images" FORCE)
+set(SDLIMAGE_JXL OFF CACHE BOOL "Support JPEG-XL images" FORCE)
+set(SDLIMAGE_TIF OFF CACHE BOOL "Support TIFF images" FORCE)
+set(SDLIMAGE_WEBP OFF CACHE BOOL "Support WebP images" FORCE)
+FetchContent_MakeAvailable(SDL3_image)
+
 # include(FetchContent)
 # FetchContent_Declare(
 #     nlohmann_json
@@ -143,7 +159,10 @@ else()
     target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
-target_link_libraries(${PROJECT_NAME} PUBLIC SDL3::SDL3)
+target_link_libraries(${PROJECT_NAME}
+    PUBLIC  SDL3::SDL3
+    PRIVATE SDL3_image::SDL3_image
+)
 
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 set_target_properties(${PROJECT_NAME} PROPERTIES

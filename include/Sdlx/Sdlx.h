@@ -1,23 +1,10 @@
-/** @file */ /********************************************************************************************************
-
-                                                         Sdlx.h
-
-                                                                     Copyright
-  2006, John J. Bolton
-         --------------------------------------------------------------------------------------------------------------
-
-         $Header: //depot/Libraries/Sdlx/Sdlx.h#1 $
-
-         $NoKeywords: $
-
-  ********************************************************************************************************************/
-
 #pragma once
 
 #include <SDL3/SDL.h>
 
 namespace Sdlx
 {
+
 //! Loads an image file (using SDL3_image). Free the result with
 //! SDL_DestroySurface.
 SDL_Surface *LoadImage(char const *filename);

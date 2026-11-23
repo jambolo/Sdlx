@@ -66,6 +66,18 @@ if (${PROJECT_NAME}_BUILD_TESTS)
     FetchContent_MakeAvailable(GoogleTest)
 endif()
 
+include(FetchContent)
+FetchContent_Declare(
+    SDL3
+    GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
+    GIT_TAG        release-3.4.20
+    GIT_SHALLOW    TRUE
+    FIND_PACKAGE_ARGS 3 CONFIG
+)
+# Put a fetched SDL3 in an export set so Sdlx can be exported and installed
+set(SDL_INSTALL ON CACHE BOOL "Enable SDL3 installation" FORCE)
+FetchContent_MakeAvailable(SDL3)
+
 # include(FetchContent)
 # FetchContent_Declare(
 #     nlohmann_json
@@ -130,6 +142,8 @@ if(MSVC)
 else()
     target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic)
 endif()
+
+target_link_libraries(${PROJECT_NAME} PUBLIC SDL3::SDL3)
 
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 set_target_properties(${PROJECT_NAME} PROPERTIES

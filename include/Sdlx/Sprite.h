@@ -16,7 +16,7 @@
 
 #include "Sdlx.h"
 
-#include <SDL.h>
+#include <SDL3/SDL.h>
 
 #include <vector>
 

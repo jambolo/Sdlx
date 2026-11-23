@@ -71,8 +71,12 @@ cmake --build build --config Release
 ctest --test-dir build -C Release --output-on-failure
 ```
 
-`test/` currently has only its `CMakeLists.txt`. Every `*.cpp` file you add there is built as its own executable
-named `Sdlx_<filename>`, and its tests are discovered automatically.
+Every `*.cpp` file in `test/` is built as its own executable named `Sdlx_<filename>`, and its tests are discovered
+automatically. The tests run headless (in-memory surfaces and the SDL event queue, no window):
+
+- `AnimatedSpriteTest.cpp` covers `Sprite` and `AnimatedSprite`: playback modes, frame boundaries, `SetTime` and
+  `SetFrame`.
+- `SdlxTest.cpp` covers the helpers, image loading with color keys, `Sprite::Draw` pixel output, and `EventLoop`.
 
 Run a single test, by name or by GoogleTest filter:
 

@@ -16,7 +16,7 @@ cmake -S . -B build -DSdlx_DOXYGEN_OUTPUT_DIRECTORY=docs && cmake --build build 
 ```
 
 - Keep the build directory path short on Windows. A long path breaks the SDL3_image clone ("Filename too long").
-- Tests: each `*.cpp` in `test/` becomes its own executable `Sdlx_<filename>`. `test/` has no test sources yet.
+- Tests: each `*.cpp` in `test/` becomes its own executable `Sdlx_<filename>`. The tests run headless, so keep them free of windows and video initialization.
 - Lint and format (CI runs them only on pull requests): `clang-format --dry-run --Werror` with the LLVM fallback style (there is no `.clang-format`), and `clang-tidy -p build`.
 - Doxygen must build with zero warnings. It reads `README.md`, `DEVELOPMENT.md`, `src/` and `include/Sdlx/`.
 
@@ -25,6 +25,7 @@ cmake -S . -B build -DSdlx_DOXYGEN_OUTPUT_DIRECTORY=docs && cmake --build build 
 - **Include paths:** sources include headers by bare name (`#include "Sdlx.h"`) through the private include path `include/Sdlx`. Public consumers use `<Sdlx/Sdlx.h>`. A new public header goes in `include/Sdlx/`, and a new source file must be added to the `SOURCES` list in `CMakeLists.txt` (headers too, for IDE grouping).
 - **SDL3 only:** the code was ported from SDL 1.2. Don't reintroduce `SDL_DisplayFormat`, `SDL_FreeSurface`, `SDL_QUIT` or similar. `SDL3::SDL3` is a public link dependency because the public headers include `<SDL3/SDL.h>`. `SDL3_image::SDL3_image` is private.
 - **Dependency fetch flags in `CMakeLists.txt` are deliberate:** SDL3_image is fetched without submodules (`GIT_SUBMODULES ""`), `SDLIMAGE_VENDORED` is off, and AVIF, JXL, TIFF and WebP are disabled. `SDL_INSTALL` and `SDLIMAGE_INSTALL` are forced on, because Sdlx's export set fails to generate without them. The package config (`cmake/SdlxConfig.cmake.in`) must keep matching the public dependencies.
+- **No RLE on color-keyed surfaces:** `LoadColorKeyedImage` deliberately doesn't call `SDL_SetSurfaceRLE`. With SDL3, an RLE-encoded surface that has an alpha channel ignores its color key when blitted. A test covers this.
 - **Ownership:** `Sprite` does not own its sheet surface, and `AnimatedSprite` does not own its `AnimationGroup`, which is shared. Surfaces from `LoadImage` are freed with `SDL_DestroySurface`.
 - **`MakeColor` and `MakeRect` are deprecated.** Use `SDL_Color{ r, g, b, 255 }` and `SDL_Rect{ x, y, w, h }`. Don't call them from the library.
 - **`AdvanceTime`:** in `AnimatedSprite`, it keeps `m_frameTime` as the time spent in the current frame. `MODE_ONCE` freezes at the start of the last frame, and `MODE_PINGPONG` plays the end frame twice when it reverses. That repeat may be intentional, so don't change it unprompted.

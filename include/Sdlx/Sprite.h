@@ -51,14 +51,14 @@ class Sprite
     //! Draws the sprite
     void Draw(SDL_Surface *dst) const;
 
-    float m_x;       //!< Location of the sprite's origin on the display
-    float m_y;       //!< Location of the sprite's origin on the display
-    SDL_Rect m_rect; //!< Location and size of the sprite in the image
-    int m_offsetX;   //!< Offset from the the UL corner to the sprite's origin
-    int m_offsetY;   //!< Offset from the the UL corner to the sprite's origin
+    float x_;       //!< Location of the sprite's origin on the display
+    float y_;       //!< Location of the sprite's origin on the display
+    SDL_Rect rect_; //!< Location and size of the sprite in the image
+    int offsetX_;   //!< Offset from the the UL corner to the sprite's origin
+    int offsetY_;   //!< Offset from the the UL corner to the sprite's origin
 
   private:
-    SDL_Surface *m_sheet; // The sheet containing the sprite's image
+    SDL_Surface *sheet_; // The sheet containing the sprite's image
 };
 
 /********************************************************************************************************************/
@@ -175,31 +175,31 @@ class AnimatedSprite : public Sprite
     //! Returns the current animation index
     int GetAnimation() const
     {
-        return m_currentAnimation;
+        return currentAnimation_;
     }
 
     //! Returns the current time (in seconds)
     float GetTime() const
     {
-        return m_time;
+        return time_;
     }
 
     //! Returns the current animation frame
     int GetFrame() const
     {
-        return m_currentFrame;
+        return currentFrame_;
     }
 
     //! Updates the state of the sprite animation
     void Service(float elapsedTime);
 
   private:
-    AnimationGroup const *m_pAnimations; // The animation group
-    int m_currentAnimation;              // The index of the current animation
-    int m_currentFrame;                  // The index of the current frame
-    float m_time;                        // The current position of the animation
-    float m_frameTime;                   // The time from the start of the current frame
-    Direction m_direction;               // The direction that the animation is playing
+    AnimationGroup const *pAnimations_; // The animation group
+    int currentAnimation_;              // The index of the current animation
+    int currentFrame_;                  // The index of the current frame
+    float time_;                        // The current position of the animation
+    float frameTime_;                   // The time from the start of the current frame
+    Direction direction_;               // The direction that the animation is playing
 };
 
 /********************************************************************************************************************/

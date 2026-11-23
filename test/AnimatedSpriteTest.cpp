@@ -48,36 +48,36 @@ TEST(SpriteTest, DefaultConstructorZeroInitializes)
 {
     Sdlx::Sprite sprite;
 
-    EXPECT_EQ(sprite.m_x, 0.0f);
-    EXPECT_EQ(sprite.m_y, 0.0f);
-    EXPECT_EQ(sprite.m_rect.x, 0);
-    EXPECT_EQ(sprite.m_rect.y, 0);
-    EXPECT_EQ(sprite.m_rect.w, 0);
-    EXPECT_EQ(sprite.m_rect.h, 0);
-    EXPECT_EQ(sprite.m_offsetX, 0);
-    EXPECT_EQ(sprite.m_offsetY, 0);
+    EXPECT_EQ(sprite.x_, 0.0f);
+    EXPECT_EQ(sprite.y_, 0.0f);
+    EXPECT_EQ(sprite.rect_.x, 0);
+    EXPECT_EQ(sprite.rect_.y, 0);
+    EXPECT_EQ(sprite.rect_.w, 0);
+    EXPECT_EQ(sprite.rect_.h, 0);
+    EXPECT_EQ(sprite.offsetX_, 0);
+    EXPECT_EQ(sprite.offsetY_, 0);
 }
 
 TEST(SpriteTest, ConstructorStoresArguments)
 {
     Sdlx::Sprite sprite(nullptr, SDL_Rect{1, 2, 3, 4}, 5, 6, 7.5f, 8.5f);
 
-    EXPECT_EQ(sprite.m_rect.x, 1);
-    EXPECT_EQ(sprite.m_rect.y, 2);
-    EXPECT_EQ(sprite.m_rect.w, 3);
-    EXPECT_EQ(sprite.m_rect.h, 4);
-    EXPECT_EQ(sprite.m_offsetX, 5);
-    EXPECT_EQ(sprite.m_offsetY, 6);
-    EXPECT_EQ(sprite.m_x, 7.5f);
-    EXPECT_EQ(sprite.m_y, 8.5f);
+    EXPECT_EQ(sprite.rect_.x, 1);
+    EXPECT_EQ(sprite.rect_.y, 2);
+    EXPECT_EQ(sprite.rect_.w, 3);
+    EXPECT_EQ(sprite.rect_.h, 4);
+    EXPECT_EQ(sprite.offsetX_, 5);
+    EXPECT_EQ(sprite.offsetY_, 6);
+    EXPECT_EQ(sprite.x_, 7.5f);
+    EXPECT_EQ(sprite.y_, 8.5f);
 }
 
 TEST_F(AnimatedSpriteTest, ConstructorSetsPosition)
 {
     AnimatedSprite sprite(nullptr, &group, 3.0f, 4.0f);
 
-    EXPECT_EQ(sprite.m_x, 3.0f);
-    EXPECT_EQ(sprite.m_y, 4.0f);
+    EXPECT_EQ(sprite.x_, 3.0f);
+    EXPECT_EQ(sprite.y_, 4.0f);
     EXPECT_EQ(sprite.GetAnimation(), 0);
     EXPECT_EQ(sprite.GetFrame(), 0);
     EXPECT_EQ(sprite.GetTime(), 0.0f);
@@ -91,9 +91,9 @@ TEST_F(AnimatedSpriteTest, PlayAnimationForwardStartsAtFirstFrame)
     EXPECT_EQ(sprite.GetAnimation(), LOOP);
     EXPECT_EQ(sprite.GetFrame(), 0);
     EXPECT_EQ(sprite.GetTime(), 0.0f);
-    EXPECT_EQ(sprite.m_rect.x, 0);
-    EXPECT_EQ(sprite.m_offsetX, 0);
-    EXPECT_EQ(sprite.m_offsetY, 0);
+    EXPECT_EQ(sprite.rect_.x, 0);
+    EXPECT_EQ(sprite.offsetX_, 0);
+    EXPECT_EQ(sprite.offsetY_, 0);
 }
 
 TEST_F(AnimatedSpriteTest, PlayAnimationBackwardStartsAtLastFrame)
@@ -102,9 +102,9 @@ TEST_F(AnimatedSpriteTest, PlayAnimationBackwardStartsAtLastFrame)
     sprite.PlayAnimation(LOOP, AnimatedSprite::DIR_BACKWARD);
 
     EXPECT_EQ(sprite.GetFrame(), 2);
-    EXPECT_EQ(sprite.m_rect.x, 20);
-    EXPECT_EQ(sprite.m_offsetX, 2);
-    EXPECT_EQ(sprite.m_offsetY, 4);
+    EXPECT_EQ(sprite.rect_.x, 20);
+    EXPECT_EQ(sprite.offsetX_, 2);
+    EXPECT_EQ(sprite.offsetY_, 4);
 }
 
 TEST_F(AnimatedSpriteTest, AdvanceWithinFrameDoesNotChangeFrame)
@@ -134,9 +134,9 @@ TEST_F(AnimatedSpriteTest, AdvanceCrossesFramesAndUpdatesImage)
     sprite.AdvanceTime(1.5f);
 
     EXPECT_EQ(sprite.GetFrame(), 1);
-    EXPECT_EQ(sprite.m_rect.x, 10);
-    EXPECT_EQ(sprite.m_offsetX, 1);
-    EXPECT_EQ(sprite.m_offsetY, 2);
+    EXPECT_EQ(sprite.rect_.x, 10);
+    EXPECT_EQ(sprite.offsetX_, 1);
+    EXPECT_EQ(sprite.offsetY_, 2);
     EXPECT_FLOAT_EQ(sprite.GetTime(), 1.5f);
 }
 
@@ -201,7 +201,7 @@ TEST_F(AnimatedSpriteTest, OnceFreezesOnLastFrame)
 
     sprite.AdvanceTime(100.0f);
     EXPECT_EQ(sprite.GetFrame(), 2);
-    EXPECT_EQ(sprite.m_rect.x, 20);
+    EXPECT_EQ(sprite.rect_.x, 20);
 }
 
 TEST_F(AnimatedSpriteTest, PingPongReversesAtTheEnds)
@@ -247,8 +247,8 @@ TEST_F(AnimatedSpriteTest, SetFrameSetsFrameAndTime)
     sprite.SetFrame(2);
     EXPECT_EQ(sprite.GetFrame(), 2);
     EXPECT_FLOAT_EQ(sprite.GetTime(), 2.0f);
-    EXPECT_EQ(sprite.m_rect.x, 20);
-    EXPECT_EQ(sprite.m_offsetY, 4);
+    EXPECT_EQ(sprite.rect_.x, 20);
+    EXPECT_EQ(sprite.offsetY_, 4);
 
     // Playback continues from the start of the selected frame.
     sprite.AdvanceTime(1.0f);

@@ -28,8 +28,8 @@ cmake -S . -B build -DSdlx_DOXYGEN_OUTPUT_DIRECTORY=docs && cmake --build build 
 - **No RLE on color-keyed surfaces:** `LoadColorKeyedImage` deliberately doesn't call `SDL_SetSurfaceRLE`. With SDL3, an RLE-encoded surface that has an alpha channel ignores its color key when blitted. A test covers this.
 - **Ownership:** `Sprite` does not own its sheet surface, and `AnimatedSprite` does not own its `AnimationGroup`, which is shared. Surfaces from `LoadImage` are freed with `SDL_DestroySurface`.
 - **`MakeColor` and `MakeRect` are deprecated.** Use `SDL_Color{r, g, b, 255}` and `SDL_Rect{x, y, w, h}`. Don't call them from the library.
-- **`AdvanceTime`:** in `AnimatedSprite`, it keeps `m_frameTime` as the time spent in the current frame. `MODE_ONCE` freezes at the start of the last frame, and `MODE_PINGPONG` plays the end frame twice when it reverses. That repeat may be intentional, so don't change it unprompted.
-- **Style:** the code is formatted with clang-format's Microsoft style, set in `.clang-format` (4-space indent, no tabs, 120 columns, braces on their own line, `f(a, b)`). Run `clang-format -i` on the files you change. Doxygen comments use `//!` with `@param` for every parameter.
+- **`AdvanceTime`:** in `AnimatedSprite`, it keeps `frameTime_` as the time spent in the current frame. `MODE_ONCE` freezes at the start of the last frame, and `MODE_PINGPONG` plays the end frame twice when it reverses. That repeat may be intentional, so don't change it unprompted.
+- **Style:** the code is formatted with clang-format's Microsoft style, set in `.clang-format` (4-space indent, no tabs, 120 columns, braces on their own line, `f(a, b)`). Run `clang-format -i` on the files you change. Doxygen comments use `//!` with `@param` for every parameter. Class member variables, public and private, take a `_` suffix (`frameTime_`, `rect_`), not an `m_` prefix. Fields of the plain structs (`Frame`, `Animation`, `AnimationGroup`) have no suffix.
 
 ## Releases
 

@@ -24,7 +24,7 @@ namespace Sdlx
 /*																													*/
 /********************************************************************************************************************/
 
-Sprite::Sprite() : m_x(0), m_y(0), m_rect(SDL_Rect{0, 0, 0, 0}), m_offsetX(0), m_offsetY(0), m_sheet(0)
+Sprite::Sprite() : x_(0), y_(0), rect_(SDL_Rect{0, 0, 0, 0}), offsetX_(0), offsetY_(0), sheet_(0)
 {
 }
 
@@ -46,7 +46,7 @@ Sprite::Sprite() : m_x(0), m_y(0), m_rect(SDL_Rect{0, 0, 0, 0}), m_offsetX(0), m
 
 Sprite::Sprite(SDL_Surface *sheet, SDL_Rect const &rect /* = MakeRect( 0, 0, 0, 0 )*/, int offsetX /* = 0*/,
                int offsetY /* = 0*/, float x /* = 0*/, float y /* = 0*/)
-    : m_x(x), m_y(y), m_rect(rect), m_offsetX(offsetX), m_offsetY(offsetY), m_sheet(sheet)
+    : x_(x), y_(y), rect_(rect), offsetX_(offsetX), offsetY_(offsetY), sheet_(sheet)
 {
 }
 
@@ -69,10 +69,10 @@ void Sprite::Draw(SDL_Surface *dst) const
 {
     bool ok;
 
-    SDL_Rect position = {int(m_x - m_offsetX + 0.5f), int(m_y - m_offsetY + 0.5f), 0, 0};
-    SDL_Rect const *pRect = (m_rect.w > 0 && m_rect.h > 0) ? &m_rect : NULL;
+    SDL_Rect position = {int(x_ - offsetX_ + 0.5f), int(y_ - offsetY_ + 0.5f), 0, 0};
+    SDL_Rect const *pRect = (rect_.w > 0 && rect_.h > 0) ? &rect_ : NULL;
 
-    ok = SDL_BlitSurface(m_sheet, pRect, dst, &position);
+    ok = SDL_BlitSurface(sheet_, pRect, dst, &position);
     assert(ok);
     (void)ok;
 }
@@ -82,8 +82,7 @@ void Sprite::Draw(SDL_Surface *dst) const
 /********************************************************************************************************************/
 
 AnimatedSprite::AnimatedSprite()
-    : m_pAnimations(0), m_currentAnimation(0), m_currentFrame(0), m_time(0.0f), m_frameTime(0.0f),
-      m_direction(DIR_FORWARD)
+    : pAnimations_(0), currentAnimation_(0), currentFrame_(0), time_(0.0f), frameTime_(0.0f), direction_(DIR_FORWARD)
 {
 }
 
@@ -101,8 +100,8 @@ AnimatedSprite::AnimatedSprite()
 //! it can be shared by many sprites.
 
 AnimatedSprite::AnimatedSprite(SDL_Surface *sheet, AnimationGroup const *animations, float x /* = 0*/, float y /* = 0*/)
-    : Sprite(sheet, SDL_Rect{0, 0, 0, 0}, 0, 0, x, y), m_pAnimations(animations), m_currentAnimation(0),
-      m_currentFrame(0), m_time(0.0f), m_frameTime(0.0f), m_direction(DIR_FORWARD)
+    : Sprite(sheet, SDL_Rect{0, 0, 0, 0}, 0, 0, x, y), pAnimations_(animations), currentAnimation_(0), currentFrame_(0),
+      time_(0.0f), frameTime_(0.0f), direction_(DIR_FORWARD)
 {
     assert(animations != 0);
 }
@@ -127,26 +126,26 @@ AnimatedSprite::~AnimatedSprite()
 
 void AnimatedSprite::PlayAnimation(int index, Direction direction /* = DIR_FORWARD*/)
 {
-    assert(index >= 0 && index < int(m_pAnimations->animations.size()));
+    assert(index >= 0 && index < int(pAnimations_->animations.size()));
 
-    Animation const &animation = m_pAnimations->animations[index]; // Convenience
-    Animation::FrameList const &frames = animation.frames;         // Convenience
+    Animation const &animation = pAnimations_->animations[index]; // Convenience
+    Animation::FrameList const &frames = animation.frames;        // Convenience
 
-    m_currentAnimation = index;
-    m_direction = direction;
-    m_currentFrame = (direction == DIR_FORWARD) ? 0 : int(frames.size()) - 1;
-    m_time = 0.0f;
-    m_frameTime = 0.0f;
+    currentAnimation_ = index;
+    direction_ = direction;
+    currentFrame_ = (direction == DIR_FORWARD) ? 0 : int(frames.size()) - 1;
+    time_ = 0.0f;
+    frameTime_ = 0.0f;
 
     // Set the image location and size according to the current frame
 
-    Frame const &frame = frames[m_currentFrame];                     // Convenience
-    AnimationGroup::ImageList const &images = m_pAnimations->images; // Convenience
-    AnimationGroup::Image const &image = images[frame.index];        // Convenience
+    Frame const &frame = frames[currentFrame_];                     // Convenience
+    AnimationGroup::ImageList const &images = pAnimations_->images; // Convenience
+    AnimationGroup::Image const &image = images[frame.index];       // Convenience
 
-    m_rect = image.rect;
-    m_offsetX = image.offsetX;
-    m_offsetY = image.offsetY;
+    rect_ = image.rect;
+    offsetX_ = image.offsetX;
+    offsetY_ = image.offsetY;
 }
 
 /********************************************************************************************************************/
@@ -163,14 +162,14 @@ void AnimatedSprite::PlayAnimation(int index, Direction direction /* = DIR_FORWA
 
 void AnimatedSprite::SetTime(float time)
 {
-    Animation const &animation = m_pAnimations->animations[m_currentAnimation]; // Convenience
+    Animation const &animation = pAnimations_->animations[currentAnimation_]; // Convenience
 
     if (animation.mode == Animation::MODE_PINGPONG)
     {
-        m_direction = DIR_FORWARD;
+        direction_ = DIR_FORWARD;
     }
 
-    PlayAnimation(m_currentAnimation, m_direction);
+    PlayAnimation(currentAnimation_, direction_);
     AdvanceTime(time);
 }
 
@@ -185,17 +184,17 @@ void AnimatedSprite::SetTime(float time)
 void AnimatedSprite::AdvanceTime(float elapsed)
 {
     assert(elapsed >= 0.0f);
-    assert(m_currentAnimation >= 0 && m_currentAnimation < int(m_pAnimations->animations.size()));
+    assert(currentAnimation_ >= 0 && currentAnimation_ < int(pAnimations_->animations.size()));
 
-    Animation const &animation = m_pAnimations->animations[m_currentAnimation]; // Convenience
-    Animation::FrameList const &frames = animation.frames;                      // Convenience
+    Animation const &animation = pAnimations_->animations[currentAnimation_]; // Convenience
+    Animation::FrameList const &frames = animation.frames;                    // Convenience
 
     if (elapsed <= 0.0f)
     {
         return;
     }
 
-    float e = elapsed + m_frameTime;
+    float e = elapsed + frameTime_;
 
     // Set the initial parameters based on the current direction
 
@@ -203,7 +202,7 @@ void AnimatedSprite::AdvanceTime(float elapsed)
     int first;
     int last;
 
-    if (m_direction == DIR_FORWARD)
+    if (direction_ == DIR_FORWARD)
     {
         step = +1;
         first = 0;
@@ -221,24 +220,24 @@ void AnimatedSprite::AdvanceTime(float elapsed)
 
     for (;;)
     {
-        float currentFrameTime = frames[m_currentFrame].time;
+        float currentFrameTime = frames[currentFrame_].time;
 
         if (e < currentFrameTime)
         {
             break;
         }
 
-        if (m_currentFrame * step < last * step)
+        if (currentFrame_ * step < last * step)
         {
-            m_currentFrame += step;
+            currentFrame_ += step;
         }
         else if (animation.mode == Animation::MODE_LOOP)
         {
-            m_currentFrame = first;
+            currentFrame_ = first;
         }
         else if (animation.mode == Animation::MODE_PINGPONG)
         {
-            m_direction = (m_direction == DIR_FORWARD) ? DIR_BACKWARD : DIR_FORWARD;
+            direction_ = (direction_ == DIR_FORWARD) ? DIR_BACKWARD : DIR_FORWARD;
             step = -step;
             std::swap(first, last);
         }
@@ -252,21 +251,21 @@ void AnimatedSprite::AdvanceTime(float elapsed)
         e -= currentFrameTime;
     }
 
-    m_frameTime = e;
+    frameTime_ = e;
 
     // Set the image location and size according to the current frame
 
-    Frame const &frame = frames[m_currentFrame];                     // Convenience
-    AnimationGroup::ImageList const &images = m_pAnimations->images; // Convenience
-    AnimationGroup::Image const &image = images[frame.index];        // Convenience
+    Frame const &frame = frames[currentFrame_];                     // Convenience
+    AnimationGroup::ImageList const &images = pAnimations_->images; // Convenience
+    AnimationGroup::Image const &image = images[frame.index];       // Convenience
 
-    m_rect = image.rect;
-    m_offsetX = image.offsetX;
-    m_offsetY = image.offsetY;
+    rect_ = image.rect;
+    offsetX_ = image.offsetX;
+    offsetY_ = image.offsetY;
 
     // Save the time
 
-    m_time += elapsed;
+    time_ += elapsed;
 }
 
 /********************************************************************************************************************/
@@ -284,47 +283,47 @@ void AnimatedSprite::AdvanceTime(float elapsed)
 
 void AnimatedSprite::SetFrame(int index)
 {
-    Animation const &animation = m_pAnimations->animations[m_currentAnimation]; // Convenience
-    Animation::FrameList const &frames = animation.frames;                      // Convenience
+    Animation const &animation = pAnimations_->animations[currentAnimation_]; // Convenience
+    Animation::FrameList const &frames = animation.frames;                    // Convenience
 
     assert(index >= 0 && index < int(frames.size()));
 
-    m_time = 0.0f;
+    time_ = 0.0f;
 
     if (animation.mode == Animation::MODE_PINGPONG)
     {
-        m_direction = DIR_FORWARD;
+        direction_ = DIR_FORWARD;
     }
 
-    switch (m_direction)
+    switch (direction_)
     {
     case DIR_FORWARD:
         for (int i = 0; i < index; ++i)
         {
-            m_time += frames[i].time;
+            time_ += frames[i].time;
         }
         break;
 
     case DIR_BACKWARD:
         for (int i = int(frames.size()) - 1; i > index; --i)
         {
-            m_time += frames[i].time;
+            time_ += frames[i].time;
         }
         break;
     }
 
-    m_currentFrame = index;
-    m_frameTime = 0.0f;
+    currentFrame_ = index;
+    frameTime_ = 0.0f;
 
     // Set the image location and size according to the current frame
 
-    Frame const &frame = frames[m_currentFrame];                     // Convenience
-    AnimationGroup::ImageList const &images = m_pAnimations->images; // Convenience
-    AnimationGroup::Image const &image = images[frame.index];        // Convenience
+    Frame const &frame = frames[currentFrame_];                     // Convenience
+    AnimationGroup::ImageList const &images = pAnimations_->images; // Convenience
+    AnimationGroup::Image const &image = images[frame.index];       // Convenience
 
-    m_rect = image.rect;
-    m_offsetX = image.offsetX;
-    m_offsetY = image.offsetY;
+    rect_ = image.rect;
+    offsetX_ = image.offsetX;
+    offsetY_ = image.offsetY;
 }
 
 /********************************************************************************************************************/

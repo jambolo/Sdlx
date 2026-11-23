@@ -97,6 +97,8 @@ jobs:
         uses: codecov/codecov-action@v7
         with:
           files: coverage.xml
+          # Upload only coverage.xml. Otherwise the action also finds the .gcov files of GoogleTest and system headers.
+          disable_search: true
           fail_ci_if_error: false
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

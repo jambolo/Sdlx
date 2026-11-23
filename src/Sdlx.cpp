@@ -70,8 +70,9 @@ SDL_Surface * LoadImage( char const * filename )
 //!		- and more
 //!
 //! @param	filename	name of the file to load
+//! @param	key			color that is treated as transparent
 //!
-//! @return		pointer to the loaded file, or 0 if error
+//! @return		pointer to the loaded surface (free with SDL_DestroySurface), or 0 if error
 
 SDL_Surface * LoadColorKeyedImage( char const * filename, SDL_Color key ) 
 {

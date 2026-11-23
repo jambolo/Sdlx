@@ -134,7 +134,8 @@ public:
 		struct Image
 		{
 			SDL_Rect	rect;				//!< Location and size within the sheet
-			int			offsetX, offsetY;	//!< Offset to the sprite's origin from the UL corner of the sprite
+			int			offsetX;			//!< Offset to the sprite's origin from the UL corner of the sprite (x)
+			int			offsetY;			//!< Offset to the sprite's origin from the UL corner of the sprite (y)
 		};
 
 		typedef std::vector< Image >		ImageList;		//!< A vector of images
@@ -197,6 +198,10 @@ private:
 /********************************************************************************************************************/
 /*																													*/
 /********************************************************************************************************************/
+
+//! Creates sprites from description files
+//
+//! @note	Not yet implemented. The load functions currently return 0.
 
 class SpriteFactory
 {

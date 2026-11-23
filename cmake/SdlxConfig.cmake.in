@@ -1,0 +1,8 @@
+get_filename_component(Sdlx_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+include(CMakeFindDependencyMacro)
+
+if(NOT TARGET Sdlx::Sdlx)
+    include("${Sdlx_CMAKE_DIR}/SdlxTargets.cmake")
+endif()
+
+set(Sdlx_LIBRARIES Sdlx::Sdlx)

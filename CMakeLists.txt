@@ -88,7 +88,9 @@ add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 
 set(SOURCES
     include/Sdlx/Sdlx.h
+    include/Sdlx/Sprite.h
     Sdlx.cpp
+    Sprite.cpp
 )
 
 target_sources(${PROJECT_NAME} PRIVATE ${SOURCES})

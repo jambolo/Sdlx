@@ -42,6 +42,7 @@ src/                 Implementation files
 test/                GoogleTest tests; each .cpp becomes its own executable
 cmake/               Package config template (SdlxConfig.cmake.in)
 Doxyfile.in          Doxygen configuration, filled in by CMake
+.clang-format        Formatting style (Microsoft)
 .github/workflows/   CI and CD
 ```
 
@@ -112,8 +113,9 @@ Branches are `master`, `develop` and `release/**`.
 | Docs | `master` only, after build and test | Builds Doxygen and deploys to GitHub Pages |
 | Coverage | `develop` only, after build and test | Builds with `--coverage`, uploads to Codecov |
 
-Formatting uses `clang-format` with its LLVM fallback style, because the repository has no `.clang-format`.
-Coverage upload needs a `CODECOV_TOKEN` repository secret.
+Formatting uses `clang-format` with the Microsoft style (4-space indent, no tabs, 120 columns, braces on their own
+line), which is set in `.clang-format` at the repository root. Run `clang-format -i` on the files you change before
+opening a pull request. Coverage upload needs a `CODECOV_TOKEN` repository secret.
 
 ### Releases
 

@@ -78,10 +78,10 @@ too.
 #include <Sdlx/Sdlx.h>
 #include <Sdlx/Sprite.h>
 
-SDL_Surface * sheet = Sdlx::LoadColorKeyedImage( "sprites.png", SDL_Color{ 255, 0, 255, 255 } );
-Sdlx::Sprite  sprite( sheet, SDL_Rect{ 0, 0, 32, 32 }, 16, 16, 100.0f, 100.0f );
+SDL_Surface *sheet = Sdlx::LoadColorKeyedImage("sprites.png", SDL_Color{255, 0, 255, 255});
+Sdlx::Sprite sprite(sheet, SDL_Rect{0, 0, 32, 32}, 16, 16, 100.0f, 100.0f);
 // ...
-sprite.Draw( screenSurface );
+sprite.Draw(screenSurface);
 ```
 
 ## Documentation

@@ -25,6 +25,12 @@ namespace Sdlx
 /********************************************************************************************************************/
 
 Sprite::Sprite()
+	:	m_x( 0 ),
+		m_y( 0 ),
+		m_rect( SDL_Rect{ 0, 0, 0, 0 } ),
+		m_offsetX( 0 ),
+		m_offsetY( 0 ),
+		m_sheet( 0 )
 {
 }
 
@@ -50,12 +56,12 @@ Sprite::Sprite( SDL_Surface *		sheet,
 				int					offsetY/* = 0*/,
 				float				x/* = 0*/,
 				float				y/* = 0*/ )
-	:	m_sheet( sheet ),
+	:	m_x( x ),
+		m_y( y ),
 		m_rect( rect ),
 		m_offsetX( offsetX ),
 		m_offsetY( offsetY ),
-		m_x( x ),
-		m_y( y )
+		m_sheet( sheet )
 {
 }
 
@@ -229,53 +235,56 @@ void AnimatedSprite::AdvanceTime( float elapsed )
 	int first;
 	int last;
 
-	switch ( m_direction )
+	if ( m_direction == DIR_FORWARD )
 	{
-	case DIR_FORWARD:
 		step	= +1;
 		first	= 0;
 		last	= int( frames.size() ) - 1;
-		break;
-	case DIR_BACKWARD:
+	}
+	else
+	{
 		step	= -1;
 		first	= int( frames.size() ) - 1;
 		last	= 0;
-		break;
 	}
 
-	// Step through the animation until the correct frame is reached
+	// Step through the animation until the correct frame is reached. When done, 'e' is the time spent in the
+	// current frame.
 
-	while ( e > 0.0f )
+	for ( ;; )
 	{
 		float currentFrameTime	= frames[ m_currentFrame ].time;
 
-		if ( e >= currentFrameTime )
+		if ( e < currentFrameTime )
 		{
-			if ( m_currentFrame * step < last * step )
-			{
-				m_currentFrame += step;
-			}
-			else
-			{
-				if ( animation.mode == Animation::MODE_LOOP )
-				{
-					m_currentFrame = first;
-				}
-				else if ( animation.mode == Animation::MODE_PINGPONG )
-				{
-					m_direction = ( m_direction == DIR_FORWARD ) ? DIR_BACKWARD : DIR_FORWARD;
-					step = -step;
-					std::swap( first, last );
-				}
-			}
+			break;
+		}
+
+		if ( m_currentFrame * step < last * step )
+		{
+			m_currentFrame += step;
+		}
+		else if ( animation.mode == Animation::MODE_LOOP )
+		{
+			m_currentFrame = first;
+		}
+		else if ( animation.mode == Animation::MODE_PINGPONG )
+		{
+			m_direction = ( m_direction == DIR_FORWARD ) ? DIR_BACKWARD : DIR_FORWARD;
+			step = -step;
+			std::swap( first, last );
 		}
 		else
 		{
-			m_frameTime = e;
+			// MODE_ONCE: freeze at the start of the last frame
+			e = 0.0f;
+			break;
 		}
 
 		e -= currentFrameTime;
 	}
+
+	m_frameTime = e;
 
 	// Set the image location and size according to the current frame
 
@@ -309,7 +318,7 @@ void AnimatedSprite::SetFrame( int index )
 	Animation const &				animation	= m_pAnimations->animations[ m_currentAnimation ];	// Convenience
 	Animation::FrameList const &	frames		= animation.frames;									// Convenience
 
-	assert( index >= 0 && index < int( frames.size() ) - 1 );
+	assert( index >= 0 && index < int( frames.size() ) );
 
 	m_time = 0.0f;
 
@@ -328,7 +337,7 @@ void AnimatedSprite::SetFrame( int index )
 		break;
 
 	case DIR_BACKWARD:
-		for ( int i = int( frames.size() ) - 1; i > index; ++i )
+		for ( int i = int( frames.size() ) - 1; i > index; --i )
 		{
 			m_time += frames[i].time;
 		}
@@ -390,7 +399,7 @@ AnimatedSprite::AnimationGroup::AnimationGroup( ImageList const & images, Animat
 //!
 //! @return	The new sprite.
 
-Sprite * SpriteFactory::LoadSprite( char const * filename )
+Sprite * SpriteFactory::LoadSprite( char const * /*filename*/ )
 {
 	return 0;
 }
@@ -407,7 +416,7 @@ Sprite * SpriteFactory::LoadSprite( char const * filename )
 //!
 //! @return	The new animated sprite.
 
-AnimatedSprite * SpriteFactory::LoadAnimatedSprite( char const * filename )
+AnimatedSprite * SpriteFactory::LoadAnimatedSprite( char const * /*filename*/ )
 {
 	return 0;
 }

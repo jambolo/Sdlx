@@ -200,6 +200,7 @@ private:
 
 class SpriteFactory
 {
+public:
 	Sprite * LoadSprite( char const * filename );
 	AnimatedSprite * LoadAnimatedSprite( char const * filename );
 };

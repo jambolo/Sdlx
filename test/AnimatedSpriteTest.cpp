@@ -140,6 +140,26 @@ TEST_F(AnimatedSpriteTest, AnimationWithNoFramesHasNoImage)
     }
 }
 
+TEST_F(AnimatedSpriteTest, AdvanceTimeCopesWithAFrameListThatBecameShorter)
+{
+    AnimatedSprite sprite(nullptr, &group);
+    sprite.PlayAnimation(LOOP);
+    sprite.AdvanceTime(2.5f);
+    ASSERT_EQ(sprite.GetFrame(), 2);
+
+    // The group is shared, so its owner can change it under the sprite
+    group.animations[LOOP].frames = {{0, 1.0f}, {1, 1.0f}};
+
+    // Frame 2 no longer exists. The sprite continues from the start of the last
+    // frame instead of reading past the end of the list.
+    sprite.AdvanceTime(0.5f);
+    EXPECT_EQ(sprite.GetFrame(), 1);
+    EXPECT_EQ(sprite.rect_.x, 10);
+
+    sprite.AdvanceTime(0.5f);
+    EXPECT_EQ(sprite.GetFrame(), 0);
+}
+
 TEST(AnimationGroupTest, MembersHaveDefaultValues)
 {
     Animation animation;

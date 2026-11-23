@@ -18,7 +18,8 @@ typedef bool (*EventLoopIdleCallback)();
 //! Event loop event handler
 typedef bool (*EventLoopEventHandler)(SDL_Event const &event);
 
-//! Handle events until a SDL_EVENT_QUIT event is received. Returns false if waiting for an event failed.
+//! Handle events until a SDL_EVENT_QUIT event is received. Returns false if the SDL events subsystem is not
+//! initialized.
 bool EventLoop(EventLoopEventHandler pEH = 0, EventLoopIdleCallback pIdle = 0);
 
 //! Returns an opaque color with the specified values

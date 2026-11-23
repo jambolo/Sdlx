@@ -166,6 +166,16 @@ void AnimatedSprite::AdvanceTime(float elapsed)
         return;
     }
 
+    // The animation group is shared and not owned, so the frame list may have
+    // been replaced with a shorter one since the current frame was set. In that
+    // case, continue from the start of the nearest frame that exists.
+
+    if (currentFrame_ < 0 || currentFrame_ >= int(frames.size()))
+    {
+        currentFrame_ = (currentFrame_ < 0) ? 0 : int(frames.size()) - 1;
+        frameTime_ = 0.0f;
+    }
+
     float e = elapsed + frameTime_;
 
     // A looping or ping-pong animation repeats, so only the time within the

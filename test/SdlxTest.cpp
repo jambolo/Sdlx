@@ -555,6 +555,20 @@ TEST(EventLoopWithoutEventsTest, ReturnsFalseWhenWaitingFails)
     EXPECT_FALSE(Sdlx::EventLoop());
 }
 
+TEST(EventLoopWithoutEventsTest, ReturnsFalseWithAnIdleCallbackThatAlwaysWantsToBeCalled)
+{
+    ASSERT_EQ(SDL_WasInit(SDL_INIT_EVENTS), 0u);
+
+    // With an idle callback, the loop polls instead of waiting. No event can
+    // arrive, so it must return instead of calling the callback forever.
+    g_idleCalls = 0;
+    EXPECT_FALSE(Sdlx::EventLoop(nullptr, [] {
+        ++g_idleCalls;
+        return true;
+    }));
+    EXPECT_EQ(g_idleCalls, 0);
+}
+
 TEST_F(EventLoopTest, HandlerSeesEveryEventUntilQuit)
 {
     PushEvent(SDL_EVENT_USER);

@@ -101,8 +101,8 @@ SDL_Surface *LoadColorKeyedSurface(char const *filename, SDL_Color key)
 //!	@param	pEH			Event Handler callback
 //!	@param	pIdle		Idle processing callback
 //!
-//! @return		@c true if the event handler ended the loop, or @c false if waiting for an event failed (call
-//!             SDL_GetError() for the reason). Waiting fails when the SDL events subsystem is not initialized.
+//! @return		@c true if the event handler ended the loop, or @c false if the loop ended because the SDL events
+//!             subsystem is not initialized, so that no event can arrive.
 
 bool EventLoop(EventLoopEventHandler pEH /* = 0*/, EventLoopIdleCallback pIdle /* = 0*/)
 {
@@ -116,28 +116,13 @@ bool EventLoop(EventLoopEventHandler pEH /* = 0*/, EventLoopIdleCallback pIdle /
     for (;;)
     {
         SDL_Event event;
-        bool haveEvent;
 
         // Get an event. If there is no idle function to call (or it no longer needs
         // to be called), then block until an event arrives, otherwise just check
         // for one.
 
-        if (skipIdle || pIdle == 0)
-        {
-            // Waiting with no time limit returns without an event only if it failed.
-            // It would fail again, so give up instead of trying forever.
-
-            if (!SDL_WaitEvent(&event))
-            {
-                return false;
-            }
-
-            haveEvent = true;
-        }
-        else
-        {
-            haveEvent = SDL_PollEvent(&event);
-        }
+        bool const waiting = (skipIdle || pIdle == 0);
+        bool const haveEvent = waiting ? SDL_WaitEvent(&event) : SDL_PollEvent(&event);
 
         if (haveEvent)
         {
@@ -150,6 +135,21 @@ bool EventLoop(EventLoopEventHandler pEH /* = 0*/, EventLoopIdleCallback pIdle /
 
             skipIdle = false; // Now that we have processed a message, start calling
                               // the callback function again.
+        }
+        else if (SDL_WasInit(SDL_INIT_EVENTS) == 0)
+        {
+            // Without the events subsystem, no event can ever arrive (and waiting
+            // for one fails), so the loop would never end.
+
+            return false;
+        }
+        else if (waiting)
+        {
+            // Waiting can return without an event while events are still working (a
+            // window system's wait may give up, for example). Try again, but don't
+            // spin.
+
+            SDL_Delay(1);
         }
         else
         {

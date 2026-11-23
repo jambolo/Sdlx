@@ -15,8 +15,8 @@ Current pieces:
     key color. The functions are not named `LoadImage`, because `<windows.h>` defines a macro with that name.
   - `EventLoop` runs until `SDL_EVENT_QUIT`. With no idle callback it blocks in `SDL_WaitEvent`. If an idle callback
     returns `false` it is not called again until after the next event. It returns `true` when the event handler ends
-    the loop, and `false` if waiting for an event fails, which happens when the SDL events subsystem is not
-    initialized.
+    the loop, and `false` if the SDL events subsystem is not initialized, since no event could then arrive. If a
+    wait returns without an event for any other reason, it retries after 1 ms.
   - `MakeColor` and `MakeRect` are deprecated. Use brace initialization (`SDL_Color{r, g, b, 255}`).
 - **Sprites** (`Sprite.h`, `Sprite.cpp`)
   - `Sprite` is a rectangle on a sheet `SDL_Surface`, with an origin offset and a float position. `Draw` blits it

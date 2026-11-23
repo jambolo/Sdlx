@@ -82,7 +82,9 @@ SDL_Surface * LoadColorKeyedImage( char const * filename, SDL_Color key )
     {
 		Uint32 colorkey = SDL_MapSurfaceRGB( image, key.r, key.g, key.b );
 		SDL_SetSurfaceColorKey( image, true, colorkey );
-		SDL_SetSurfaceRLE( image, true );
+
+		// Note: RLE acceleration (SDL_SetSurfaceRLE) is deliberately not enabled. With SDL3, an RLE-encoded surface
+		// that has an alpha channel ignores the color key when blitted.
     }
 
 	return image;

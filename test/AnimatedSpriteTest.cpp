@@ -275,6 +275,107 @@ TEST_F(AnimatedSpriteTest, ServiceAdvancesTime)
     EXPECT_FLOAT_EQ(sprite.GetTime(), 1.25f);
 }
 
+TEST_F(AnimatedSpriteTest, LoopWithZeroDurationFramesStaysOnCurrentFrame)
+{
+    Animation still;
+    still.mode = Animation::MODE_LOOP;
+    still.frames = {{1, 0.0f}};
+    group.animations.push_back(still);
+
+    AnimatedSprite sprite(nullptr, &group);
+    sprite.PlayAnimation(3);
+    sprite.Service(0.016f); // must terminate
+
+    EXPECT_EQ(sprite.GetFrame(), 0);
+    EXPECT_EQ(sprite.rect_.x, 10);
+    EXPECT_FLOAT_EQ(sprite.GetTime(), 0.016f);
+}
+
+TEST_F(AnimatedSpriteTest, PingPongWithZeroDurationFramesStaysOnCurrentFrame)
+{
+    Animation still;
+    still.mode = Animation::MODE_PINGPONG;
+    still.frames = {{0, 0.0f}, {2, 0.0f}};
+    group.animations.push_back(still);
+
+    AnimatedSprite sprite(nullptr, &group);
+    sprite.PlayAnimation(3);
+    sprite.AdvanceTime(5.0f); // must terminate
+
+    EXPECT_EQ(sprite.GetFrame(), 0);
+    EXPECT_EQ(sprite.rect_.x, 0);
+    EXPECT_FLOAT_EQ(sprite.GetTime(), 5.0f);
+}
+
+// Subtracting a frame's duration from a float as large as 1e9 does not change
+// it, so these would never return if the time were used up one frame at a time.
+
+TEST_F(AnimatedSpriteTest, VeryLargeAdvanceOfLoopLandsOnTheRightFrame)
+{
+    AnimatedSprite sprite(nullptr, &group);
+    sprite.PlayAnimation(LOOP);
+
+    // 333,333,333 whole loops of 3 seconds, and 1 second more
+    sprite.AdvanceTime(1.0e9f);
+    EXPECT_EQ(sprite.GetFrame(), 1);
+    sprite.AdvanceTime(1.0f);
+    EXPECT_EQ(sprite.GetFrame(), 2);
+}
+
+TEST_F(AnimatedSpriteTest, VeryLargeAdvanceOfPingPongLandsOnTheRightFrame)
+{
+    AnimatedSprite sprite(nullptr, &group);
+    sprite.PlayAnimation(PINGPONG);
+
+    // 166,666,666 whole round trips of 6 seconds, and 4 seconds more. A round
+    // trip is frames 0 1 2 2 1 0, so the animation is on frame 1, going backward.
+    sprite.AdvanceTime(1.0e9f);
+    EXPECT_EQ(sprite.GetFrame(), 1);
+    sprite.AdvanceTime(1.0f);
+    EXPECT_EQ(sprite.GetFrame(), 0);
+}
+
+TEST_F(AnimatedSpriteTest, AdvancingByWholeLoopsKeepsThePositionInTheFrame)
+{
+    AnimatedSprite sprite(nullptr, &group);
+    sprite.PlayAnimation(LOOP);
+    sprite.AdvanceTime(1.5f);
+
+    sprite.AdvanceTime(3000.0f);
+    EXPECT_EQ(sprite.GetFrame(), 1);
+
+    // Still half a second into frame 1
+    sprite.AdvanceTime(0.25f);
+    EXPECT_EQ(sprite.GetFrame(), 1);
+    sprite.AdvanceTime(0.25f);
+    EXPECT_EQ(sprite.GetFrame(), 2);
+}
+
+// A default-constructed sprite has no animation group. Its animation functions
+// assert in a debug build, so the release behavior (do nothing) can be tested
+// only when asserts are disabled.
+
+#if defined(NDEBUG)
+
+TEST(AnimatedSpriteWithoutGroupTest, AnimationFunctionsDoNothing)
+{
+    AnimatedSprite sprite;
+
+    sprite.PlayAnimation(1);
+    sprite.AdvanceTime(1.0f);
+    sprite.Service(1.0f);
+    sprite.SetTime(2.0f);
+    sprite.SetFrame(1);
+
+    EXPECT_EQ(sprite.GetAnimation(), 0);
+    EXPECT_EQ(sprite.GetFrame(), 0);
+    EXPECT_EQ(sprite.GetTime(), 0.0f);
+    EXPECT_EQ(sprite.rect_.w, 0);
+    EXPECT_EQ(sprite.rect_.h, 0);
+}
+
+#endif // defined(NDEBUG)
+
 TEST_F(AnimatedSpriteTest, AnimationGroupIsSharedBetweenSprites)
 {
     AnimatedSprite a(nullptr, &group);

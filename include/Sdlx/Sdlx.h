@@ -8,10 +8,11 @@ namespace Sdlx
 
 //! Loads an image file (using SDL3_image). Free the result with
 //! SDL_DestroySurface.
-SDL_Surface *LoadImage(char const *filename);
+SDL_Surface *LoadSurface(char const *filename);
 
-//! Loads an image file and applies a color key
-SDL_Surface *LoadColorKeyedImage(char const *filename, SDL_Color key);
+//! Loads an image file and applies a color key. A paletted image is converted
+//! to 32-bit RGBA.
+SDL_Surface *LoadColorKeyedSurface(char const *filename, SDL_Color key);
 
 //! Idle processing callback.
 typedef bool (*EventLoopIdleCallback)();

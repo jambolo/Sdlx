@@ -6,8 +6,8 @@ if(NOT TARGET GTest::gtest)
 endif()
 include(GoogleTest)
 
-# Function to create test executables
-function(add_test test_name source_file)
+# Function to create test executables (not named add_test, which is a CMake command)
+function(sdlx_add_test test_name source_file)
     add_executable(${test_name} ${source_file})
     set_target_properties(${test_name} PROPERTIES
         CXX_STANDARD 17
@@ -32,6 +32,15 @@ function(add_test test_name source_file)
             GTest::gtest
             GTest::gtest_main
     )
+    # On Windows, copy the DLLs that the test depends on (if any) next to it, so that it can run. This must come before
+    # gtest_discover_tests, which runs the test after it is built.
+    if(WIN32)
+        add_custom_command(TARGET ${test_name} POST_BUILD
+            COMMAND "$<$<BOOL:$<TARGET_RUNTIME_DLLS:${test_name}>>:${CMAKE_COMMAND};-E;copy_if_different;$<TARGET_RUNTIME_DLLS:${test_name}>;$<TARGET_FILE_DIR:${test_name}>>"
+            COMMAND_EXPAND_LISTS
+        )
+    endif()
+
     gtest_discover_tests(${test_name})
     message(STATUS "Added test executable: ${test_name}")
 endfunction()
@@ -42,5 +51,5 @@ message(STATUS "Building tests for ${PROJECT_NAME}")
 
 foreach(FILE ${SOURCES})
     get_filename_component(TEST ${FILE} NAME_WE)
-    add_test("${PROJECT_NAME}_${TEST}" ${FILE})
+    sdlx_add_test("${PROJECT_NAME}_${TEST}" ${FILE})
 endforeach()

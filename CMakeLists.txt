@@ -114,15 +114,26 @@ FetchContent_MakeAvailable(SDL3_image)
 add_library(${PROJECT_NAME})
 add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 
-set(SOURCES
+set(PUBLIC_HEADERS
     include/Sdlx/Sdlx.h
     include/Sdlx/Sprite.h
+)
+
+set(SOURCES
     src/Sdlx.cpp
     src/Sprite.cpp
 )
 
-target_sources(${PROJECT_NAME} PRIVATE ${SOURCES})
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
+# The public headers are a file set so that install(TARGETS ... FILE_SET HEADERS) installs them
+target_sources(${PROJECT_NAME}
+    PRIVATE
+        ${SOURCES}
+    PUBLIC
+        FILE_SET HEADERS
+        BASE_DIRS include
+        FILES ${PUBLIC_HEADERS}
+)
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${PUBLIC_HEADERS} ${SOURCES})
 
 set(PUBLIC_INCLUDE_PATHS
     $<INSTALL_INTERFACE:include>
@@ -171,6 +182,8 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     CXX_EXTENSIONS OFF
     VERSION ${PROJECT_VERSION}
     SOVERSION ${PROJECT_VERSION_MAJOR}
+    # The API has no export annotations, so a Windows DLL must export every symbol
+    WINDOWS_EXPORT_ALL_SYMBOLS ON
 )
 
 #configure_file("${PROJECT_SOURCE_DIR}/Version.h.in" "${PROJECT_BINARY_DIR}/Version.h")
@@ -289,9 +302,10 @@ if(IS_TOP_LEVEL_PROJECT)
     export(PACKAGE ${PROJECT_NAME})
 endif()
 
-# Install documentation if built
-if(${PROJECT_NAME}_BUILD_DOCS AND DOXYGEN_FOUND)
-    install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/docs/
+# Install documentation if built. A relative output directory is relative to the source directory, which is where
+# Doxygen runs.
+if(${PROJECT_NAME}_DOXYGEN_OUTPUT_DIRECTORY AND DOXYGEN_FOUND)
+    install(DIRECTORY ${${PROJECT_NAME}_DOXYGEN_OUTPUT_DIRECTORY}/html
             DESTINATION ${CMAKE_INSTALL_DOCDIR}
             OPTIONAL)
 endif()

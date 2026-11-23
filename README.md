@@ -14,7 +14,7 @@ aren't already installed.
 
 Sdlx is early in its SDL3 port. What exists today:
 
-- Image loading, with optional color keying (`LoadImage`, `LoadColorKeyedImage`), via SDL3_image.
+- Image loading, with optional color keying (`LoadSurface`, `LoadColorKeyedSurface`), via SDL3_image.
 - A simple event loop with idle processing (`EventLoop`).
 - 2D sprites and time-based sprite animation (`Sprite`, `AnimatedSprite`) that blit from a sheet surface.
 
@@ -78,7 +78,7 @@ too.
 #include <Sdlx/Sdlx.h>
 #include <Sdlx/Sprite.h>
 
-SDL_Surface *sheet = Sdlx::LoadColorKeyedImage("sprites.png", SDL_Color{255, 0, 255, 255});
+SDL_Surface *sheet = Sdlx::LoadColorKeyedSurface("sprites.png", SDL_Color{255, 0, 255, 255});
 Sdlx::Sprite sprite(sheet, SDL_Rect{0, 0, 32, 32}, 16, 16, 100.0f, 100.0f);
 // ...
 sprite.Draw(screenSurface);

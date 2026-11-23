@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cmath>
 
 namespace Sdlx
 {
@@ -30,7 +31,7 @@ Sprite::Sprite() : x_(0), y_(0), rect_(SDL_Rect{0, 0, 0, 0}), offsetX_(0), offse
 //! @param	x,y					Initial location of the
 //! sprite
 
-Sprite::Sprite(SDL_Surface *sheet, SDL_Rect const &rect /* = MakeRect( 0, 0, 0, 0 )*/, int offsetX /* = 0*/,
+Sprite::Sprite(SDL_Surface *sheet, SDL_Rect const &rect /* = SDL_Rect{0, 0, 0, 0}*/, int offsetX /* = 0*/,
                int offsetY /* = 0*/, float x /* = 0*/, float y /* = 0*/)
     : x_(x), y_(y), rect_(rect), offsetX_(offsetX), offsetY_(offsetY), sheet_(sheet)
 {
@@ -48,6 +49,7 @@ Sprite::~Sprite()
 /*																													*/
 /********************************************************************************************************************/
 
+//! The position is rounded to the nearest pixel.
 //!
 //! @param	dst		destination surface
 
@@ -55,7 +57,8 @@ void Sprite::Draw(SDL_Surface *dst) const
 {
     bool ok;
 
-    SDL_Rect position = {int(x_ - offsetX_ + 0.5f), int(y_ - offsetY_ + 0.5f), 0, 0};
+    // Use floor, not a cast, so that negative positions also round to the nearest pixel.
+    SDL_Rect position = {int(std::floor(x_ - offsetX_ + 0.5f)), int(std::floor(y_ - offsetY_ + 0.5f)), 0, 0};
     SDL_Rect const *pRect = (rect_.w > 0 && rect_.h > 0) ? &rect_ : NULL;
 
     ok = SDL_BlitSurface(sheet_, pRect, dst, &position);
@@ -109,9 +112,18 @@ AnimatedSprite::~AnimatedSprite()
 //!
 //! @param	index			Which animation to play
 //! @param	direction		Which direction to play the animation
+//!
+//! @note	This function does nothing if the sprite has no animation group
+//! (it was default-constructed).
 
 void AnimatedSprite::PlayAnimation(int index, Direction direction /* = DIR_FORWARD*/)
 {
+    assert(pAnimations_ != 0);
+    if (pAnimations_ == 0)
+    {
+        return;
+    }
+
     assert(index >= 0 && index < int(pAnimations_->animations.size()));
 
     Animation const &animation = pAnimations_->animations[index]; // Convenience
@@ -145,9 +157,17 @@ void AnimatedSprite::PlayAnimation(int index, Direction direction /* = DIR_FORWA
 //!
 //! @note If the mode is ping-pong, then the initial direction is assumed to be
 //! forward.
+//! @note	This function does nothing if the sprite has no animation group
+//! (it was default-constructed).
 
 void AnimatedSprite::SetTime(float time)
 {
+    assert(pAnimations_ != 0);
+    if (pAnimations_ == 0)
+    {
+        return;
+    }
+
     Animation const &animation = pAnimations_->animations[currentAnimation_]; // Convenience
 
     if (animation.mode == Animation::MODE_PINGPONG)
@@ -165,22 +185,66 @@ void AnimatedSprite::SetTime(float time)
 
 //! This function advances the animation by the specified amount of time
 //!
-//! @param	elapsed		elapsed time (must be >= 0)
+//! @param	elapsed		elapsed time (must be finite and >= 0)
+//!
+//! @note	A looping or ping-pong animation whose frames have no duration
+//! stays on its current frame.
+//! @note	This function does nothing if the sprite has no animation group
+//! (it was default-constructed).
 
 void AnimatedSprite::AdvanceTime(float elapsed)
 {
-    assert(elapsed >= 0.0f);
+    assert(pAnimations_ != 0);
+    if (pAnimations_ == 0)
+    {
+        return;
+    }
+
+    assert(elapsed >= 0.0f && std::isfinite(elapsed));
     assert(currentAnimation_ >= 0 && currentAnimation_ < int(pAnimations_->animations.size()));
 
     Animation const &animation = pAnimations_->animations[currentAnimation_]; // Convenience
     Animation::FrameList const &frames = animation.frames;                    // Convenience
 
-    if (elapsed <= 0.0f)
+    // Nothing to do if no time has passed. This also rejects a NaN or infinite
+    // time, which would never be used up by the loop below.
+
+    if (!(elapsed > 0.0f) || !std::isfinite(elapsed))
     {
         return;
     }
 
     float e = elapsed + frameTime_;
+
+    // A looping or ping-pong animation repeats, so only the time within the
+    // current repetition matters. Dropping the whole repetitions bounds the
+    // loop below, even when the elapsed time is too large for subtracting a
+    // frame's duration to change it. A ping-pong animation repeats after playing
+    // forward and then backward.
+
+    if (animation.mode != Animation::MODE_ONCE)
+    {
+        float period = 0.0f;
+        for (Frame const &f : frames)
+        {
+            period += f.time;
+        }
+        if (animation.mode == Animation::MODE_PINGPONG)
+        {
+            period *= 2.0f;
+        }
+
+        // If the frames have no duration, then time cannot move the animation
+        // (and the loop below would never end).
+
+        if (!(period > 0.0f))
+        {
+            time_ += elapsed;
+            return;
+        }
+
+        e = std::fmod(elapsed, period) + frameTime_;
+    }
 
     // Set the initial parameters based on the current direction
 
@@ -266,9 +330,17 @@ void AnimatedSprite::AdvanceTime(float elapsed)
 //!
 //! @note If the mode is ping-pong, then the initial direction is assumed to be
 //! forward.
+//! @note	This function does nothing if the sprite has no animation group
+//! (it was default-constructed).
 
 void AnimatedSprite::SetFrame(int index)
 {
+    assert(pAnimations_ != 0);
+    if (pAnimations_ == 0)
+    {
+        return;
+    }
+
     Animation const &animation = pAnimations_->animations[currentAnimation_]; // Convenience
     Animation::FrameList const &frames = animation.frames;                    // Convenience
 

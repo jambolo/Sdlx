@@ -50,19 +50,25 @@ jobs:
             echo "exists=false" >> "$GITHUB_OUTPUT"
             echo "Tag ${{ steps.get_version.outputs.version }} will be created"
           fi
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
       - name: Create and push tag
         if: steps.check_tag.outputs.exists == 'false'
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag "${{ steps.get_version.outputs.version }}"
           git push origin "${{ steps.get_version.outputs.version }}"
+      # This step does not depend on whether the tag was just created, so re-running the job after a failed merge
+      # finishes the release.
       - name: Merge master into develop
-        if: steps.check_tag.outputs.exists == 'false'
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          MASTER_SHA=$(git rev-parse HEAD)
           git fetch origin develop
-          git checkout develop
-          git merge origin/master --no-ff -m "Merge master into develop after release ${{ steps.get_version.outputs.version }}"
+          if git merge-base --is-ancestor "$MASTER_SHA" origin/develop; then
+            echo "develop already contains master"
+            exit 0
+          fi
+          git checkout -B develop origin/develop
+          git merge "$MASTER_SHA" --no-ff -m "Merge master into develop after release ${{ steps.get_version.outputs.version }}"
           git push origin develop

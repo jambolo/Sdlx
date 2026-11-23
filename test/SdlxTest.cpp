@@ -7,10 +7,14 @@
 
 #include <gtest/gtest.h>
 
+#include <chrono>
 #include <cstdio>
 #include <filesystem>
+#include <fstream>
 #include <memory>
 #include <string>
+#include <thread>
+#include <vector>
 
 namespace
 {
@@ -90,6 +94,47 @@ struct TempFile
     std::string path;
 };
 
+// A 3x3 blue 8-bit RGB PNG file. It is embedded so that the tests need no PNG
+// writer (SDL_SavePNG requires SDL 3.4).
+unsigned char const BLUE_3X3_PNG[] = {
+    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52, 0x00, 0x00,
+    0x00, 0x03, 0x00, 0x00, 0x00, 0x03, 0x08, 0x02, 0x00, 0x00, 0x00, 0xd9, 0x4a, 0x22, 0xe8, 0x00, 0x00, 0x00,
+    0x0f, 0x49, 0x44, 0x41, 0x54, 0x78, 0xda, 0x63, 0x60, 0x60, 0xf8, 0x0f, 0x43, 0x98, 0x2c, 0x00, 0x7d, 0xa0,
+    0x08, 0xf8, 0xa6, 0x20, 0x7f, 0x64, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
+};
+
+bool WriteFile(std::string const &path, unsigned char const *data, size_t size)
+{
+    std::ofstream file(path, std::ios::binary);
+    file.write(reinterpret_cast<char const *>(data), std::streamsize(size));
+    return file.good();
+}
+
+// Saves an 8-bit paletted BMP that is one pixel high and has one pixel for each
+// palette entry: pixel i has the color palette[i].
+bool SavePalettedBmp(std::string const &path, std::vector<SDL_Color> const &palette)
+{
+    SurfacePtr surface(SDL_CreateSurface(int(palette.size()), 1, SDL_PIXELFORMAT_INDEX8));
+    if (surface.get() == nullptr)
+    {
+        return false;
+    }
+
+    SDL_Palette *p = SDL_CreateSurfacePalette(surface.get());
+    if (p == nullptr || !SDL_SetPaletteColors(p, palette.data(), 0, int(palette.size())))
+    {
+        return false;
+    }
+
+    Uint8 *pixels = static_cast<Uint8 *>(surface.get()->pixels);
+    for (size_t i = 0; i < palette.size(); ++i)
+    {
+        pixels[i] = Uint8(i);
+    }
+
+    return SDL_SaveBMP(surface.get(), path.c_str());
+}
+
 } // anonymous namespace
 
 /********************************************************************************************************************/
@@ -134,14 +179,14 @@ TEST(HelpersTest, MakeColorSetsFieldsAndIsOpaque)
 /* Image loading */
 /********************************************************************************************************************/
 
-TEST(LoadImageTest, LoadsBmp)
+TEST(LoadSurfaceTest, LoadsBmp)
 {
     SurfacePtr source(NewSurface(4, 2, RED));
     Fill(source.get(), SDL_Rect{2, 0, 2, 2}, GREEN);
     TempFile file("sdlx_test_load.bmp");
     ASSERT_TRUE(SDL_SaveBMP(source.get(), file.path.c_str())) << SDL_GetError();
 
-    SurfacePtr image(Sdlx::LoadImage(file.path.c_str()));
+    SurfacePtr image(Sdlx::LoadSurface(file.path.c_str()));
 
     ASSERT_NE(image.get(), nullptr) << SDL_GetError();
     EXPECT_EQ(image.get()->w, 4);
@@ -150,13 +195,12 @@ TEST(LoadImageTest, LoadsBmp)
     EXPECT_EQ(At(image.get(), 3, 1), GREEN);
 }
 
-TEST(LoadImageTest, LoadsPng)
+TEST(LoadSurfaceTest, LoadsPng)
 {
-    SurfacePtr source(NewSurface(3, 3, BLUE));
     TempFile file("sdlx_test_load.png");
-    ASSERT_TRUE(SDL_SavePNG(source.get(), file.path.c_str())) << SDL_GetError();
+    ASSERT_TRUE(WriteFile(file.path, BLUE_3X3_PNG, sizeof(BLUE_3X3_PNG)));
 
-    SurfacePtr image(Sdlx::LoadImage(file.path.c_str()));
+    SurfacePtr image(Sdlx::LoadSurface(file.path.c_str()));
 
     ASSERT_NE(image.get(), nullptr) << SDL_GetError();
     EXPECT_EQ(image.get()->w, 3);
@@ -164,18 +208,18 @@ TEST(LoadImageTest, LoadsPng)
     EXPECT_EQ(At(image.get(), 1, 1), BLUE);
 }
 
-TEST(LoadImageTest, MissingFileReturnsNull)
+TEST(LoadSurfaceTest, MissingFileReturnsNull)
 {
-    EXPECT_EQ(Sdlx::LoadImage("this/file/does/not/exist.png"), nullptr);
+    EXPECT_EQ(Sdlx::LoadSurface("this/file/does/not/exist.png"), nullptr);
 }
 
-TEST(LoadColorKeyedImageTest, SetsColorKey)
+TEST(LoadColorKeyedSurfaceTest, SetsColorKey)
 {
     SurfacePtr source(NewSurface(2, 1, MAGENTA));
     TempFile file("sdlx_test_key.bmp");
     ASSERT_TRUE(SDL_SaveBMP(source.get(), file.path.c_str())) << SDL_GetError();
 
-    SurfacePtr image(Sdlx::LoadColorKeyedImage(file.path.c_str(), SDL_Color{255, 0, 255, 255}));
+    SurfacePtr image(Sdlx::LoadColorKeyedSurface(file.path.c_str(), SDL_Color{255, 0, 255, 255}));
 
     ASSERT_NE(image.get(), nullptr) << SDL_GetError();
     EXPECT_TRUE(SDL_SurfaceHasColorKey(image.get()));
@@ -185,14 +229,14 @@ TEST(LoadColorKeyedImageTest, SetsColorKey)
     EXPECT_EQ(key, SDL_MapSurfaceRGB(image.get(), 255, 0, 255));
 }
 
-TEST(LoadColorKeyedImageTest, KeyedPixelsAreNotBlitted)
+TEST(LoadColorKeyedSurfaceTest, KeyedPixelsAreNotBlitted)
 {
     SurfacePtr source(NewSurface(2, 1, MAGENTA));
     Fill(source.get(), SDL_Rect{1, 0, 1, 1}, RED);
     TempFile file("sdlx_test_keyblit.bmp");
     ASSERT_TRUE(SDL_SaveBMP(source.get(), file.path.c_str())) << SDL_GetError();
 
-    SurfacePtr image(Sdlx::LoadColorKeyedImage(file.path.c_str(), SDL_Color{255, 0, 255, 255}));
+    SurfacePtr image(Sdlx::LoadColorKeyedSurface(file.path.c_str(), SDL_Color{255, 0, 255, 255}));
     ASSERT_NE(image.get(), nullptr) << SDL_GetError();
 
     SurfacePtr dst(NewSurface(2, 1, BLUE));
@@ -202,9 +246,64 @@ TEST(LoadColorKeyedImageTest, KeyedPixelsAreNotBlitted)
     EXPECT_EQ(At(dst.get(), 1, 0), RED);
 }
 
-TEST(LoadColorKeyedImageTest, MissingFileReturnsNull)
+TEST(LoadColorKeyedSurfaceTest, PalettedImageIsConvertedToTrueColor)
 {
-    EXPECT_EQ(Sdlx::LoadColorKeyedImage("this/file/does/not/exist.png", SDL_Color{0, 0, 0, 255}), nullptr);
+    TempFile file("sdlx_test_palette.bmp");
+    ASSERT_TRUE(SavePalettedBmp(file.path, {SDL_Color{255, 0, 255, 255}, SDL_Color{255, 0, 0, 255}})) << SDL_GetError();
+
+    // Check that the file really is loaded as a paletted surface, or the other
+    // paletted tests would prove nothing.
+    SurfacePtr plain(Sdlx::LoadSurface(file.path.c_str()));
+    ASSERT_NE(plain.get(), nullptr) << SDL_GetError();
+    ASSERT_TRUE(SDL_ISPIXELFORMAT_INDEXED(plain.get()->format));
+
+    SurfacePtr image(Sdlx::LoadColorKeyedSurface(file.path.c_str(), SDL_Color{255, 0, 255, 255}));
+
+    ASSERT_NE(image.get(), nullptr) << SDL_GetError();
+    EXPECT_FALSE(SDL_ISPIXELFORMAT_INDEXED(image.get()->format));
+    EXPECT_TRUE(SDL_SurfaceHasColorKey(image.get()));
+    EXPECT_EQ(image.get()->w, 2);
+    EXPECT_EQ(image.get()->h, 1);
+}
+
+TEST(LoadColorKeyedSurfaceTest, PalettedImageWithoutTheKeyColorHasNoTransparentPixels)
+{
+    // Pink is the palette entry nearest to the magenta key, but it is not the key
+    Pixel const PINK = {255, 0, 200};
+    TempFile file("sdlx_test_palette_nokey.bmp");
+    ASSERT_TRUE(SavePalettedBmp(file.path, {SDL_Color{255, 0, 200, 255}, SDL_Color{255, 0, 0, 255}})) << SDL_GetError();
+
+    SurfacePtr image(Sdlx::LoadColorKeyedSurface(file.path.c_str(), SDL_Color{255, 0, 255, 255}));
+    ASSERT_NE(image.get(), nullptr) << SDL_GetError();
+
+    SurfacePtr dst(NewSurface(2, 1, BLUE));
+    ASSERT_TRUE(SDL_BlitSurface(image.get(), nullptr, dst.get(), nullptr)) << SDL_GetError();
+
+    EXPECT_EQ(At(dst.get(), 0, 0), PINK);
+    EXPECT_EQ(At(dst.get(), 1, 0), RED);
+}
+
+TEST(LoadColorKeyedSurfaceTest, EveryPaletteEntryOfTheKeyColorIsTransparent)
+{
+    TempFile file("sdlx_test_palette_twice.bmp");
+    ASSERT_TRUE(SavePalettedBmp(file.path,
+                                {SDL_Color{255, 0, 255, 255}, SDL_Color{255, 0, 0, 255}, SDL_Color{255, 0, 255, 255}}))
+        << SDL_GetError();
+
+    SurfacePtr image(Sdlx::LoadColorKeyedSurface(file.path.c_str(), SDL_Color{255, 0, 255, 255}));
+    ASSERT_NE(image.get(), nullptr) << SDL_GetError();
+
+    SurfacePtr dst(NewSurface(3, 1, BLUE));
+    ASSERT_TRUE(SDL_BlitSurface(image.get(), nullptr, dst.get(), nullptr)) << SDL_GetError();
+
+    EXPECT_EQ(At(dst.get(), 0, 0), BLUE);
+    EXPECT_EQ(At(dst.get(), 1, 0), RED);
+    EXPECT_EQ(At(dst.get(), 2, 0), BLUE);
+}
+
+TEST(LoadColorKeyedSurfaceTest, MissingFileReturnsNull)
+{
+    EXPECT_EQ(Sdlx::LoadColorKeyedSurface("this/file/does/not/exist.png", SDL_Color{0, 0, 0, 255}), nullptr);
 }
 
 /********************************************************************************************************************/
@@ -271,6 +370,28 @@ TEST_F(SpriteDrawTest, PositionIsRoundedToNearestPixel)
     EXPECT_EQ(At(other.get(), 10, 10), BLACK);
 }
 
+TEST_F(SpriteDrawTest, NegativePositionIsRoundedToNearestPixel)
+{
+    // -1.2 rounds to -1, so the first column and row of the sheet are clipped
+    Sdlx::Sprite up(sheet->get(), SDL_Rect{0, 0, 0, 0}, 0, 0, -1.2f, -1.2f);
+    up.Draw(dst->get());
+    EXPECT_EQ(At(dst->get(), 2, 0), RED);
+    EXPECT_EQ(At(dst->get(), 3, 0), GREEN);
+    EXPECT_EQ(At(dst->get(), 6, 6), GREEN);
+    EXPECT_EQ(At(dst->get(), 7, 0), BLACK);
+    EXPECT_EQ(At(dst->get(), 0, 7), BLACK);
+
+    // -1.6 rounds to -2
+    SurfacePtr other(NewSurface(32, 32, BLACK));
+    Sdlx::Sprite down(sheet->get(), SDL_Rect{0, 0, 0, 0}, 0, 0, -1.6f, -1.6f);
+    down.Draw(other.get());
+    EXPECT_EQ(At(other.get(), 1, 0), RED);
+    EXPECT_EQ(At(other.get(), 2, 0), GREEN);
+    EXPECT_EQ(At(other.get(), 5, 5), GREEN);
+    EXPECT_EQ(At(other.get(), 6, 0), BLACK);
+    EXPECT_EQ(At(other.get(), 0, 6), BLACK);
+}
+
 TEST_F(SpriteDrawTest, AnimatedSpriteDrawsCurrentFrame)
 {
     Sdlx::AnimatedSprite::AnimationGroup group;
@@ -331,11 +452,29 @@ bool IdleThenQuit()
     return true;
 }
 
-bool IdleOnceThenQuit()
+std::thread g_pusher; // pushes an event from another thread, after a delay
+
+// Always asks not to be called again until after the next event. The first call
+// arranges for an event to arrive later, and the first call after that event
+// has been handled ends the loop.
+bool IdleUntilAnEventIsHandled()
 {
     ++g_idleCalls;
-    PushEvent(SDL_EVENT_QUIT);
-    return false; // do not call again until after the next event
+    if (g_idleCalls == 1)
+    {
+        g_pusher = std::thread([] {
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            SDL_Event e;
+            SDL_zero(e);
+            e.type = SDL_EVENT_USER;
+            SDL_PushEvent(&e);
+        });
+    }
+    if (g_events > 0)
+    {
+        PushEvent(SDL_EVENT_QUIT);
+    }
+    return false;
 }
 
 class EventLoopTest : public ::testing::Test
@@ -402,7 +541,12 @@ TEST_F(EventLoopTest, IdleCallbackRunsWhenThereAreNoEvents)
 
 TEST_F(EventLoopTest, IdleCallbackReturningFalseIsNotCalledAgainUntilNextEvent)
 {
-    Sdlx::EventLoop(nullptr, IdleOnceThenQuit);
+    // After the first idle call returns false, the loop must block until the
+    // event from the other thread arrives. If it kept calling the idle callback
+    // instead, the callback would be called many times during the delay.
+    Sdlx::EventLoop(CountingHandler, IdleUntilAnEventIsHandled);
+    g_pusher.join();
 
-    EXPECT_EQ(g_idleCalls, 1);
+    EXPECT_EQ(g_idleCalls, 2);
+    EXPECT_EQ(g_events, 2); // the delayed event and the quit event
 }

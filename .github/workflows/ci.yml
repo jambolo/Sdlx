@@ -37,7 +37,7 @@ jobs:
       - name: Format check
         run: git ls-files '*.cpp' '*.h' | xargs -r clang-format --dry-run --Werror
       - name: Configure (compile database)
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DSdlx_BUILD_TESTS=ON
       - name: Lint
         run: git ls-files '*.cpp' | xargs -r clang-tidy -p build
 

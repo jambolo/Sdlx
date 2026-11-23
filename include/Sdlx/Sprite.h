@@ -137,7 +137,8 @@ class AnimatedSprite : public Sprite
         AnimationList animations; //!< All the animations in this group
     };
 
-    //! Default constructor
+    //! Default constructor. The sprite has no animation group, so its animation
+    //! functions do nothing.
     AnimatedSprite();
 
     //! Constructor

@@ -36,7 +36,7 @@ namespace Sdlx
 //! @return		pointer to the loaded surface (free with
 //! SDL_DestroySurface), or 0 if error
 
-SDL_Surface *LoadImage(char const *filename)
+SDL_Surface *LoadSurface(char const *filename)
 {
     return IMG_Load(filename);
 }
@@ -56,25 +56,48 @@ SDL_Surface *LoadImage(char const *filename)
 //!		- TGA
 //!		- and more
 //!
+//! A paletted image is converted to a 32-bit RGBA surface, so that only pixels
+//! of exactly the key color are transparent. Other images are returned in the
+//! format in which they were loaded.
+//!
 //! @param	filename	name of the file to load
 //! @param	key			color that is treated as transparent
 //!
 //! @return		pointer to the loaded surface (free with
 //! SDL_DestroySurface), or 0 if error
 
-SDL_Surface *LoadColorKeyedImage(char const *filename, SDL_Color key)
+SDL_Surface *LoadColorKeyedSurface(char const *filename, SDL_Color key)
 {
-    SDL_Surface *image = LoadImage(filename);
+    SDL_Surface *image = LoadSurface(filename);
 
-    if (image != 0)
+    if (image == 0)
     {
-        Uint32 colorkey = SDL_MapSurfaceRGB(image, key.r, key.g, key.b);
-        SDL_SetSurfaceColorKey(image, true, colorkey);
-
-        // Note: RLE acceleration (SDL_SetSurfaceRLE) is deliberately not enabled.
-        // With SDL3, an RLE-encoded surface that has an alpha channel ignores the
-        // color key when blitted.
+        return 0;
     }
+
+    // On a paletted surface, a color maps to the nearest palette entry (and only
+    // to one entry), so the wrong color could become transparent. Converting to
+    // true color makes the match exact.
+
+    if (SDL_ISPIXELFORMAT_INDEXED(image->format))
+    {
+        SDL_Surface *converted = SDL_ConvertSurface(image, SDL_PIXELFORMAT_RGBA32);
+        SDL_DestroySurface(image);
+
+        if (converted == 0)
+        {
+            return 0;
+        }
+
+        image = converted;
+    }
+
+    Uint32 colorkey = SDL_MapSurfaceRGB(image, key.r, key.g, key.b);
+    SDL_SetSurfaceColorKey(image, true, colorkey);
+
+    // Note: RLE acceleration (SDL_SetSurfaceRLE) is deliberately not enabled.
+    // With SDL3, an RLE-encoded surface that has an alpha channel ignores the
+    // color key when blitted.
 
     return image;
 }

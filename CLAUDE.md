@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-Sdlx is a C++17 library wrapping SDL3 (RAII and abstractions; `Surface` is the only RAII wrapper so far). `README.md` covers usage and `DEVELOPMENT.md` covers architecture, build, test, docs and CI in detail. Read them rather than duplicating them here.
+Sdlx is a C++17 library wrapping SDL3 (RAII and abstractions; `Surface` and `Window` are the only RAII wrappers so far). `README.md` covers usage and `DEVELOPMENT.md` covers architecture, build, test, docs and CI in detail. Read them rather than duplicating them here.
 
 ## Commands
 
@@ -17,7 +17,7 @@ cmake -S . -B build -DSdlx_DOXYGEN_OUTPUT_DIRECTORY=docs && cmake --build build 
 
 - Keep the build directory path short on Windows. A long path breaks the SDL3_image clone ("Filename too long").
 - On Linux, a fetched SDL3 fails to configure without the X11 or Wayland development packages. For a headless build, add `-DSDL_UNIX_CONSOLE_BUILD=ON -DSDL_X11=OFF -DSDL_WAYLAND=OFF`, as the workflows do (`SDL_LINUX_ARGS`).
-- Tests: each `*.cpp` in `test/` becomes its own executable `Sdlx_<filename>`. The tests run headless, so keep them free of windows and video initialization.
+- Tests: each `*.cpp` in `test/` becomes its own executable `Sdlx_<filename>`. The tests run headless, so keep them free of real windows. A test that needs a window initializes video with the `dummy` driver (`SDL_HINT_VIDEO_DRIVER`), as `WindowTest.cpp` does; that driver doesn't support icons, parents or popups.
 - Doxygen must build with zero warnings. It reads `README.md`, `DEVELOPMENT.md`, `src/` and `include/Sdlx/`.
 
 ## Things that aren't obvious from one file
@@ -32,6 +32,7 @@ cmake -S . -B build -DSdlx_DOXYGEN_OUTPUT_DIRECTORY=docs && cmake --build build 
 - **`advanceTime`:** in `AnimatedSprite`, it keeps `frameTime_` as the time spent in the current frame. `MODE_ONCE` freezes at the start of the last frame, and `MODE_PINGPONG` plays the end frame twice when it reverses. That repeat may be intentional, so don't change it unprompted. For `MODE_LOOP` and `MODE_PINGPONG` it first reduces the elapsed time with `fmod` over one repetition (ping-pong repeats after twice the total duration), and returns early if the frames have no duration; both guard against an endless loop.
 - **An `AnimatedSprite` may have no image:** when it has no animation group (default-constructed), the group has no animations, or the current animation has no frames. `updateImage` then leaves `rect_` empty, and `AnimatedSprite::draw` draws nothing; a plain `Sprite` with an empty `rect_` draws the whole sheet, which is why `draw` is virtual. The animation functions do nothing in these cases and assert only for a missing group.
 - **`eventLoop` returns `bool`:** it returns `false` only when no event was available and `SDL_WasInit(SDL_INIT_EVENTS)` is 0, because then no event can ever arrive. Don't return just because `SDL_WaitEvent` returned false: with a shown window it can do that while events still work, so the loop delays 1 ms and retries.
+- **`Window` guards some SDL calls itself:** `SDL_GetWindowICCProfile` doesn't validate its window (it crashes on `nullptr`), and `SDL_CreatePopupWindow` initializes the video subsystem before it checks the parent, so `getICCProfile` and `createPopup` check for a missing window first. `Window` never calls `SDL_DestroyWindow(nullptr)`, which would overwrite the `SDL_GetError` message. `Window` is move-only because `SDL_Window` has no reference count, and SDL destroys child windows with their parent.
 - **Build settings don't leak:** the default build type is set only for the top-level project, and the `d` debug postfix is a property of the Sdlx target, not `CMAKE_DEBUG_POSTFIX`.
 - **Style:** Doxygen comments use `//!` with `@param` for every parameter. Type names are PascalCase (`AnimatedSprite`). Member functions and free functions are camelCase (`get`, `loadSurface`). Class member variables, public and private, are camelCase with a `_` suffix (`frameTime_`, `rect_`), not an `m_` prefix. File-scope variables are camelCase with a `g_` prefix (`g_events`); class-scope and function-scope static variables are camelCase with an `s_` prefix. Compile-time constants (`constexpr` and the like), macros and enum values are UPPER_SNAKE_CASE (`MODE_LOOP`, `BLACK`), with no prefix. A runtime constant (a `const` variable whose value is computed at run time) follows the variable rules above (`imageIndex`). Fields of the plain structs (`Frame`, `Animation`, `AnimationGroup`) have no suffix.
 

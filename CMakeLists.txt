@@ -126,12 +126,14 @@ set(PUBLIC_HEADERS
     include/Sdlx/Sdlx.h
     include/Sdlx/Sprite.h
     include/Sdlx/Surface.h
+    include/Sdlx/Window.h
 )
 
 set(SOURCES
     src/Sdlx.cpp
     src/Sprite.cpp
     src/Surface.cpp
+    src/Window.cpp
 )
 
 # The public headers are a file set so that install(TARGETS ... FILE_SET HEADERS) installs them

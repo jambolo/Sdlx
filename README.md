@@ -16,7 +16,7 @@ Sdlx is early in its SDL3 port. What exists today:
 
 - Image loading, with optional color keying (`loadSurface`, `loadColorKeyedSurface`), via SDL3_image.
 - A simple event loop with idle processing (`eventLoop`).
-- An RAII wrapper for `SDL_Surface` (`Surface`).
+- RAII wrappers for `SDL_Surface` (`Surface`) and `SDL_Window` (`Window`).
 - 2D sprites and time-based sprite animation (`Sprite`, `AnimatedSprite`) that blit from a sheet surface.
 
 The load functions still return a plain `SDL_Surface *`. Wrap it in a `Surface` to have it freed for you:

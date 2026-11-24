@@ -7,6 +7,9 @@ SDL resources and abstractions over SDL's C API.
 
 - **Surface** (`Surface.h`): a reference-counted owner of an `SDL_Surface`, with member functions that wrap SDL's
   surface functions. Copies share the surface. `Surface::Lock` is an RAII lock on its pixels.
+- **Window** (`Window.h`): a move-only owner of an `SDL_Window`, with member functions that wrap SDL's window
+  functions. An `SDL_Window` has no reference count, so a `Window` can't be copied. SDL destroys a window's child
+  windows along with it, so destroy or release a `Window` that owns a child before the one that owns its parent.
 - **Helpers** (`Sdlx.h`): image loading through SDL3_image, and a simple event loop.
 - **Sprites** (`Sprite.h`): sprites drawn from a sheet surface, and time-based sprite animation.
 
@@ -76,8 +79,9 @@ ctest --test-dir build -C Release --output-on-failure
 ```
 
 Every `*.cpp` file in `test/` is built as its own executable named `Sdlx_<filename>`, and its tests are discovered
-automatically. The tests run headless, using in-memory surfaces and the SDL event queue, so keep windows and video
-initialization out of them.
+automatically. The tests run headless, using in-memory surfaces and the SDL event queue, so keep real windows out of
+them. The tests that need a window (`WindowTest.cpp`) use SDL's `dummy` video driver, which creates windows without a
+display. It doesn't support icons, parents or popups, so those can't be tested this way.
 
 Run a single test, by name or by GoogleTest filter:
 
